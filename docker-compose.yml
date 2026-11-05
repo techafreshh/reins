@@ -1,0 +1,5 @@
+# Reins walking skeleton: no external services required.
+# Local dev uses file-backed PGlite; the toolchain is Node 22 + pnpm via corepack.
+name: reins
+
+services: {}
