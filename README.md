@@ -32,6 +32,17 @@ pnpm dev
 
 Full docs: [agent-native.com/docs/template-chat](https://agent-native.com/docs/template-chat?utm_source=github&utm_medium=referral&utm_content=chat-readme).
 
+## CI verification gate
+
+Every PR runs the `verify` job (`.github/workflows/ci.yml`): `pnpm typecheck`
+plus `pnpm test`. Branch protection must require the `verify` check, so a red
+`verify` blocks merge.
+
+```bash
+pnpm typecheck
+pnpm test
+```
+
 ## Walking skeleton
 
 Minimal runnable baseline: a health endpoint plus a placeholder jobs page.
