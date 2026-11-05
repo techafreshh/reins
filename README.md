@@ -31,3 +31,26 @@ pnpm dev
 ```
 
 Full docs: [agent-native.com/docs/template-chat](https://agent-native.com/docs/template-chat?utm_source=github&utm_medium=referral&utm_content=chat-readme).
+
+## Walking skeleton
+
+Minimal runnable baseline: a health endpoint plus a placeholder jobs page.
+
+Prerequisites: Node 22 (`engines` requires >=22.22) and pnpm via corepack.
+
+```bash
+corepack enable
+cp .env.example .env
+pnpm install
+pnpm dev
+```
+
+Dev server: `http://localhost:8080/` (default `agent-native dev` port).
+
+Probe surfaces:
+
+- `GET /api/health` → `200` with exactly `{"status":"ok","skeleton":true}`.
+- `GET /` → `200` HTML placeholder containing `Reins skeleton live` (skeleton v0.1.0) with links to `/home` and `/chat`.
+
+No external services are required (`docker-compose.yml` is an intentionally
+empty-services stub; local state is file-backed PGlite).
