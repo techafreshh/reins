@@ -233,6 +233,45 @@ describe("assign-task and get-job-feed", () => {
     const after = await db.select().from(messages).where(eq(messages.jobId, jobId));
     expect(after.length).toBe(before.length);
   });
+
+  it("rejects whitespace-only tasks without inserting a card", async () => {
+    const jobId = await runningJob("Whitespace rejected");
+    const db = getDb();
+    const before = await db.select().from(messages).where(eq(messages.jobId, jobId));
+
+    const schema = (assignTask as unknown as {
+      schema: { safeParse: (value: unknown) => { success: boolean } };
+    }).schema;
+    expect(schema.safeParse({ jobId, agent: "drafter", task: "   " }).success).toBe(false);
+    expect(schema.safeParse({ jobId, agent: "drafter", task: "\t\n " }).success).toBe(false);
+
+    const failure = await assignTask
+      .run({ jobId, agent: "drafter", task: "   " })
+      .catch((e) => e);
+    expect(isActionContractError(failure)).toBe(false);
+    expect((failure as { statusCode?: number } | undefined)?.statusCode ?? 400).not.toBe(500);
+
+    const after = await db.select().from(messages).where(eq(messages.jobId, jobId));
+    expect(after.length).toBe(before.length);
+
+    const feed = await getJobFeed.run({ id: jobId });
+    expect(feed.cards.every((row) => row.body.trim().length > 0)).toBe(true);
+  });
+
+  it("stores padded tasks trimmed", async () => {
+    const jobId = await runningJob("Padded task trimmed");
+
+    const schema = (assignTask as unknown as {
+      schema: { safeParse: (value: unknown) => { success: boolean; data?: unknown } };
+    }).schema;
+    const parsed = schema.safeParse({ jobId, agent: "drafter", task: "  draft follow-up  " });
+    expect(parsed.success).toBe(true);
+
+    const assigned = await assignTask.run({ jobId, agent: "drafter", task: "  draft follow-up  " });
+    const feed = await getJobFeed.run({ id: jobId });
+    const card = feed.cards.find((row) => row.id === assigned.id)!;
+    expect(card).toMatchObject({ agent: "drafter", body: "draft follow-up" });
+  });
 });
 
 describe("job feed heartbeat", () => {
