@@ -13,6 +13,11 @@ const INITIAL_TOOL_NAMES = [
   "list_threads",
   "provider-api-request",
   "ask-question",
+  "create_job",
+  "list_jobs",
+  "get_job_state",
+  "steer_job",
+  "advance_job",
 ];
 
 export default createAgentChatPlugin({
