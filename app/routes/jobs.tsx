@@ -41,7 +41,7 @@ function isJobsRow(value: unknown): value is JobsLoaderJob {
 export async function loader({ request }: LoaderFunctionArgs): Promise<JobsLoaderData> {
   const empty: JobsLoaderData = { jobs: [] };
   try {
-    const url = new URL("/_agent-native/actions/list_jobs", request.url);
+    const url = new URL("/_agent-native/actions/list-jobs", request.url);
     const headers: Record<string, string> = {};
     const cookie = request.headers.get("cookie");
     if (cookie) {
@@ -73,7 +73,7 @@ export async function loader({ request }: LoaderFunctionArgs): Promise<JobsLoade
 }
 
 async function postCreateJob(title: string): Promise<void> {
-  const response = await fetch("/_agent-native/actions/create_job", {
+  const response = await fetch("/_agent-native/actions/create-job", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ template: "chase-up", title }),

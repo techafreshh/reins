@@ -33,7 +33,7 @@ interface QueueCardProps {
 }
 
 async function postDecision(body: Record<string, unknown>): Promise<void> {
-  const response = await fetch("/_agent-native/actions/decide_effect", {
+  const response = await fetch("/_agent-native/actions/decide-effect", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),

@@ -16,7 +16,7 @@ interface LearningEntry {
 }
 
 async function postResolution(learningId: string, resolution: "approved" | "rejected") {
-  const response = await fetch("/_agent-native/actions/resolve_learning", {
+  const response = await fetch("/_agent-native/actions/resolve-learning", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ learningId, resolution }),
@@ -33,7 +33,7 @@ export default function LearningsRoute() {
 
   async function refresh() {
     try {
-      const response = await fetch("/_agent-native/actions/list_learnings");
+      const response = await fetch("/_agent-native/actions/list-learnings");
       if (!response.ok) {
         throw new Error(`List failed with ${response.status}`);
       }

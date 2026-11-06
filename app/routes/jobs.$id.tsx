@@ -54,7 +54,7 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
   if (jobId) {
     try {
       const url = new URL(
-        `/_agent-native/actions/get_job_state?id=${encodeURIComponent(jobId)}`,
+        `/_agent-native/actions/get-job-state?id=${encodeURIComponent(jobId)}`,
         request.url,
       );
       const headers: Record<string, string> = {};
@@ -90,7 +90,7 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
     // to fetch on every paint from any state. Failures degrade to null
     // and the agent columns below still render.
     try {
-      const url = new URL("/_agent-native/actions/digest_completed_job", request.url);
+      const url = new URL("/_agent-native/actions/digest-completed-job", request.url);
       const headers: Record<string, string> = { "content-type": "application/json" };
       const cookie = request.headers.get("cookie");
       if (cookie) {
@@ -225,13 +225,13 @@ export default function JobFeedRoute() {
     },
   });
 
-  const stateQuery = useActionQuery("get_job_state", { id: jobId }, { enabled: Boolean(jobId), refetchInterval: 5000 });
+  const stateQuery = useActionQuery("get-job-state", { id: jobId }, { enabled: Boolean(jobId), refetchInterval: 5000 });
   const feedQuery = useActionQuery(
-    "get_job_feed",
+    "get-job-feed",
     { id: jobId },
     { enabled: Boolean(jobId), refetchInterval: 5000 },
   );
-  const assign = useActionMutation("assign_task");
+  const assign = useActionMutation("assign-task");
 
   const display = useLoaderData<typeof loader>();
   const [agent, setAgent] = useState<"drafter" | "tracker">("drafter");

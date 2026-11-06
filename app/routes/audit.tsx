@@ -52,7 +52,7 @@ function payloadExcerpt(payload: unknown): string {
 export async function loader({ request }: LoaderFunctionArgs): Promise<AuditLoaderData> {
   const empty: AuditLoaderData = { events: [] };
   try {
-    const url = new URL("/_agent-native/actions/list_audit", request.url);
+    const url = new URL("/_agent-native/actions/list-audit", request.url);
     const headers: Record<string, string> = {};
     const cookie = request.headers.get("cookie");
     if (cookie) {
