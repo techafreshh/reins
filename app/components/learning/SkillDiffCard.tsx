@@ -13,7 +13,7 @@ export interface SkillDiffCardProps {
 /**
  * One rule proposal: the current excerpt (pre-rule draft phrasing) beside
  * the proposed addition (the rule text). Approve/Reject post
- * `resolve_learning` through the owning route.
+ * `resolve-learning` through the owning route.
  */
 export default function SkillDiffCard({
   rule,

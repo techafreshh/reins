@@ -7,10 +7,10 @@ import { closeDbExec, getDbExec } from "@agent-native/core/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import advanceJob from "../actions/advance_job.js";
-import assignTask from "../actions/assign_task.js";
-import createJob from "../actions/create_job.js";
-import getJobFeed from "../actions/get_job_feed.js";
+import advanceJob from "../actions/advance-job.js";
+import assignTask from "../actions/assign-task.js";
+import createJob from "../actions/create-job.js";
+import getJobFeed from "../actions/get-job-feed.js";
 import { getDb } from "../server/db/index.js";
 import { auditEvents, decisions, messages } from "../server/db/schema.js";
 import { ensureFanout, groupFeedForJob } from "../server/lib/loops/orchestrator.js";
@@ -106,7 +106,7 @@ describe("orchestrator fan-out", () => {
   });
 });
 
-describe("assign_task and get_job_feed", () => {
+describe("assign-task and get-job-feed", () => {
   beforeAll(async () => {
     await applyMigrations();
   });
@@ -121,7 +121,7 @@ describe("assign_task and get_job_feed", () => {
     const assigned = await assignTask.run({ jobId, agent: "drafter", task: "draft follow-up" });
     expect(typeof assigned.id).toBe("string");
     expect(assigned.id.length).toBeGreaterThan(0);
-    expect(assigned).toMatchObject({ jobId, agent: "drafter", nextRequiredAction: "get_job_feed" });
+    expect(assigned).toMatchObject({ jobId, agent: "drafter", nextRequiredAction: "get-job-feed" });
 
     const feed = await getJobFeed.run({ id: jobId });
     expect(feed).toMatchObject({ id: jobId, state: "running" });
@@ -144,7 +144,7 @@ describe("assign_task and get_job_feed", () => {
     expect(
       assignTask.changeResource?.(
         { jobId: "job_1", agent: "drafter", task: "t" },
-        { id: "m", message: "m", jobId: "job_1", agent: "drafter", nextRequiredAction: "get_job_feed" },
+        { id: "m", message: "m", jobId: "job_1", agent: "drafter", nextRequiredAction: "get-job-feed" },
       ),
     ).toEqual({ resourceType: "job", resourceId: "job_1" });
     expect(
@@ -166,7 +166,7 @@ describe("assign_task and get_job_feed", () => {
     expect(
       createJob.changeResource?.(
         { template: "chase-up", title: "t" },
-        { id: "job_4", message: "m", state: "planning", nextRequiredAction: "advance_job" },
+        { id: "job_4", message: "m", state: "planning", nextRequiredAction: "advance-job" },
       ),
     ).toEqual({ resourceType: "job", resourceId: "job_4" });
     expect(

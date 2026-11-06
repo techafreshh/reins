@@ -8,11 +8,11 @@ import { closeDbExec, getDbExec } from "@agent-native/core/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import advanceJob from "../actions/advance_job.js";
-import createJob from "../actions/create_job.js";
-import getJobState from "../actions/get_job_state.js";
-import listJobs from "../actions/list_jobs.js";
-import steerJob from "../actions/steer_job.js";
+import advanceJob from "../actions/advance-job.js";
+import createJob from "../actions/create-job.js";
+import getJobState from "../actions/get-job-state.js";
+import listJobs from "../actions/list-jobs.js";
+import steerJob from "../actions/steer-job.js";
 import { getDb } from "../server/db/index.js";
 import { decisions, messages } from "../server/db/schema.js";
 import { canTransition, JOB_STATES, nextActionFor, TRANSITIONS } from "../server/lib/state.js";
@@ -79,10 +79,10 @@ describe("job lifecycle state machine", () => {
   });
 
   it("maps each state to its next required action", () => {
-    expect(nextActionFor("planning")).toBe("advance_job");
-    expect(nextActionFor("running")).toBe("advance_job");
-    expect(nextActionFor("awaiting_review")).toBe("steer_job");
-    expect(nextActionFor("complete")).toBe("list_jobs");
+    expect(nextActionFor("planning")).toBe("advance-job");
+    expect(nextActionFor("running")).toBe("advance-job");
+    expect(nextActionFor("awaiting_review")).toBe("steer-job");
+    expect(nextActionFor("complete")).toBe("list-jobs");
   });
 });
 
@@ -100,7 +100,7 @@ describe("job lifecycle actions", () => {
     expect(created.id.startsWith("job_")).toBe(true);
     expect(created.message).toBe("Job created in planning");
     expect(created.state).toBe("planning");
-    expect(created.nextRequiredAction).toBe("advance_job");
+    expect(created.nextRequiredAction).toBe("advance-job");
 
     const state = await getJobState.run({ id: created.id });
     expect(state).toMatchObject({ id: created.id, title: "Post-launch sweep", state: "planning" });
@@ -130,7 +130,7 @@ describe("job lifecycle actions", () => {
       id: created.id,
       message: "Steering acknowledged",
       state: "running",
-      nextRequiredAction: "advance_job",
+      nextRequiredAction: "advance-job",
     });
     expect(await getJobState.run({ id: created.id })).toMatchObject({ state: "running" });
 
@@ -168,7 +168,7 @@ describe("job lifecycle actions", () => {
     expect(done).toMatchObject({
       id: created.id,
       state: "complete",
-      nextRequiredAction: "list_jobs",
+      nextRequiredAction: "list-jobs",
     });
     expect(await getJobState.run({ id: created.id })).toMatchObject({ state: "complete" });
   });

@@ -19,7 +19,7 @@ export default function SteerBar({
   suggestions?: readonly string[];
 }) {
   const [instruction, setInstruction] = useState("");
-  const steer = useActionMutation("steer_job");
+  const steer = useActionMutation("steer-job");
 
   function submit(event?: React.FormEvent) {
     event?.preventDefault();

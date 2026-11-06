@@ -48,7 +48,7 @@ function normalizeLevels(value: unknown): TrustLoaderData["levels"] {
 }
 
 /**
- * SSR-first policy read: the loader fetches `get_policy` same-origin
+ * SSR-first policy read: the loader fetches `get-policy` same-origin
  * (forwarding the viewer's credentials) so the first paint already carries
  * the live levels. Auth failures redirect to sign-in; any other failure
  * degrades to ASK-everything with the kill switch off.
@@ -56,7 +56,7 @@ function normalizeLevels(value: unknown): TrustLoaderData["levels"] {
 export async function loader({ request }: LoaderFunctionArgs): Promise<TrustLoaderData> {
   const fallback = fallbackData();
   try {
-    const url = new URL("/_agent-native/actions/get_policy", request.url);
+    const url = new URL("/_agent-native/actions/get-policy", request.url);
     const headers: Record<string, string> = {};
     const cookie = request.headers.get("cookie");
     if (cookie) {
@@ -103,7 +103,7 @@ export interface TrustPanelProps {
 /**
  * Presentational trust panel. Section headings keep the literal
  * `kill switch` / `send_followup` strings probe-visible independent of
- * loader data; the stepper posts `update_policy` writes through `onUpdate`.
+ * loader data; the stepper posts `update-policy` writes through `onUpdate`.
  */
 export function TrustPanel({ levels, killSwitch, busy = false, onUpdate }: TrustPanelProps) {
   const update = onUpdate ?? (() => {});
@@ -188,7 +188,7 @@ export default function TrustRoute() {
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch("/_agent-native/actions/update_policy", {
+      const response = await fetch("/_agent-native/actions/update-policy", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),

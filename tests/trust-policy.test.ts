@@ -9,10 +9,10 @@ import { closeDbExec, getDbExec } from "@agent-native/core/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import createJob from "../actions/create_job.js";
-import getPolicy from "../actions/get_policy.js";
-import proposeEffect from "../actions/propose_effect.js";
-import updatePolicy from "../actions/update_policy.js";
+import createJob from "../actions/create-job.js";
+import getPolicy from "../actions/get-policy.js";
+import proposeEffect from "../actions/propose-effect.js";
+import updatePolicy from "../actions/update-policy.js";
 import { TrustPanel } from "../app/routes/trust.js";
 import { getDb } from "../server/db/index.js";
 import { auditEvents, threads } from "../server/db/schema.js";
@@ -88,7 +88,7 @@ describe("trust policy predicates", () => {
   });
 });
 
-describe("get_policy defaults", () => {
+describe("get-policy defaults", () => {
   beforeAll(async () => {
     await applyMigrations();
   });
@@ -110,7 +110,7 @@ describe("get_policy defaults", () => {
   });
 });
 
-describe("update_policy writes and audit", () => {
+describe("update-policy writes and audit", () => {
   beforeAll(async () => {
     await applyMigrations();
   });

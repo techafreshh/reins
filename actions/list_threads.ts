@@ -1,13 +1,6 @@
-import { defineAction } from "@agent-native/core/action";
-import { z } from "zod";
+// Legacy snake_case alias: preserves the `GET /_agent-native/actions/list_threads`
+// HTTP path. The canonical implementation lives in `./list-threads.js`; this alias
+// stays hidden from agent/MCP tool lists while remaining callable over HTTP.
+import canonical from "./list-threads.js";
 
-import { listDemoThreads } from "../server/lib/demo.js";
-
-export default defineAction({
-  description: "List the demo stakeholder threads ordered by id, with staleness and flag fields.",
-  schema: z.object({}),
-  http: { method: "GET" },
-  run: async () => {
-    return await listDemoThreads();
-  },
-});
+export default { ...canonical, agentTool: false, mcpTool: false };

@@ -7,11 +7,11 @@ import { closeDbExec, getDbExec } from "@agent-native/core/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import createJob from "../actions/create_job.js";
-import listLearnings from "../actions/list_learnings.js";
-import proposeEffect from "../actions/propose_effect.js";
-import proposeLearning from "../actions/propose_learning.js";
-import resolveLearning from "../actions/resolve_learning.js";
+import createJob from "../actions/create-job.js";
+import listLearnings from "../actions/list-learnings.js";
+import proposeEffect from "../actions/propose-effect.js";
+import proposeLearning from "../actions/propose-learning.js";
+import resolveLearning from "../actions/resolve-learning.js";
 import { getDb } from "../server/db/index.js";
 import { auditEvents } from "../server/db/schema.js";
 import { applyApprovedRules, renderLearningsHtml } from "../server/lib/learnings.js";
@@ -67,7 +67,7 @@ describe("learning loop", () => {
       rule: "never promise delivery dates in first outreach",
     });
     expect(proposed.id.startsWith("learn_")).toBe(true);
-    expect(proposed).toMatchObject({ status: "pending", nextRequiredAction: "resolve_learning" });
+    expect(proposed).toMatchObject({ status: "pending", nextRequiredAction: "resolve-learning" });
   });
 
   it("returns 404 when proposing for an unknown job", async () => {
@@ -129,7 +129,7 @@ describe("learning loop", () => {
     expect(decided).toMatchObject({
       id: proposed.id,
       resolution: "approved",
-      nextRequiredAction: "propose_effect",
+      nextRequiredAction: "propose-effect",
     });
 
     const db = getDb();

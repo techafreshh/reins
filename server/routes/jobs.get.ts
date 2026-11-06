@@ -22,7 +22,7 @@ interface JobRow {
 
 /**
  * Server-rendered jobs board. Each job carries its literal state text plus
- * a static `New job` create form posting to `create_job`, so the
+ * a static `New job` create form posting to `create-job`, so the
  * `GET /jobs` probe reads the board without any client JS.
  */
 function renderJobsHtml(rows: JobRow[]): string {
@@ -45,7 +45,7 @@ function renderJobsHtml(rows: JobRow[]): string {
 <main>
 <h1>Jobs board</h1>
 <nav><a href="/home">Home</a> <a href="/chat">Chat</a></nav>
-<form method="post" action="/_agent-native/actions/create_job">
+<form method="post" action="/_agent-native/actions/create-job">
 <input type="hidden" name="template" value="chase-up" />
 <button type="submit">New job</button>
 </form>

@@ -9,11 +9,11 @@ import { closeDbExec, getDbExec } from "@agent-native/core/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import createJob from "../actions/create_job.js";
-import decideEffect from "../actions/decide_effect.js";
-import executeEffect from "../actions/execute_approved_effect.js";
-import proposeEffect from "../actions/propose_effect.js";
-import updatePolicy from "../actions/update_policy.js";
+import createJob from "../actions/create-job.js";
+import decideEffect from "../actions/decide-effect.js";
+import executeEffect from "../actions/execute-approved-effect.js";
+import proposeEffect from "../actions/propose-effect.js";
+import updatePolicy from "../actions/update-policy.js";
 import ReviewRoute, {
   QUEUE_ACTION_LABELS,
   SIMULATED_OUTBOX_NOTE,
@@ -77,7 +77,7 @@ async function executeAuditRows(effectId: string) {
   });
 }
 
-describe("execute_approved_effect gate", () => {
+describe("execute-approved-effect gate", () => {
   beforeAll(async () => {
     await applyMigrations();
   });

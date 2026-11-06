@@ -6,7 +6,7 @@ import { getDb } from "../db/index.js";
 import { auditEvents, jobs } from "../db/schema.js";
 
 /**
- * Best-effort pipe from `steer_job` into the job's live thread.
+ * Best-effort pipe from `steer-job` into the job's live thread.
  *
  * Delivery is queue-not-interrupt (see `docs/DECISIONS.md` D1/D7): steering
  * is plan recalibration, not cancellation, so the instruction is recorded

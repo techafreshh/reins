@@ -39,13 +39,13 @@ type Db = ReturnType<typeof getDb>;
 export function nextActionFor(state: string): string {
   switch (state) {
     case "planning":
-      return "advance_job";
+      return "advance-job";
     case "running":
-      return "advance_job";
+      return "advance-job";
     case "awaiting_review":
-      return "steer_job";
+      return "steer-job";
     default:
-      return "list_jobs";
+      return "list-jobs";
   }
 }
 

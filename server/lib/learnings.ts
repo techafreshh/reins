@@ -19,7 +19,7 @@ export type LearningStatus = (typeof LEARNING_STATUS)[number];
 /**
  * Banned-exemplar map enforced at draft time. Enforcement is exemplar-based
  * (v1): any approved learning for the job triggers sanitization of these
- * exact case-sensitive strings, so the next `propose_effect` draft cannot
+ * exact case-sensitive strings, so the next `propose-effect` draft cannot
  * repeat the rejected phrasing.
  */
 export const BANNED_EXEMPLARS: Record<string, string> = {
@@ -94,12 +94,12 @@ export function renderLearningsHtml(rows: LearningRow[]): string {
 <h3>proposed</h3>
 <p>${escapeHtml(row.rule)}</p>
 <p>Status: ${escapeHtml(row.status)}</p>
-<form method="post" action="/_agent-native/actions/resolve_learning">
+<form method="post" action="/_agent-native/actions/resolve-learning">
 <input type="hidden" name="learningId" value="${escapeHtml(row.id)}" />
 <input type="hidden" name="resolution" value="approved" />
 <button type="submit">Approve</button>
 </form>
-<form method="post" action="/_agent-native/actions/resolve_learning">
+<form method="post" action="/_agent-native/actions/resolve-learning">
 <input type="hidden" name="learningId" value="${escapeHtml(row.id)}" />
 <input type="hidden" name="resolution" value="rejected" />
 <button type="submit">Reject</button>

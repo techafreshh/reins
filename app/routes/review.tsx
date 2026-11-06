@@ -57,7 +57,7 @@ function isQueueEffect(value: unknown): value is QueueEffect {
 export async function loader({ request }: LoaderFunctionArgs): Promise<ReviewLoaderData> {
   const empty: ReviewLoaderData = { pending: [], decided: [], labels: QUEUE_ACTION_LABELS };
   try {
-    const url = new URL("/_agent-native/actions/list_effects", request.url);
+    const url = new URL("/_agent-native/actions/list-effects", request.url);
     const headers: Record<string, string> = {};
     const cookie = request.headers.get("cookie");
     if (cookie) {
@@ -120,7 +120,7 @@ export default function ReviewRoute() {
     setBatchBusy(true);
     setBatchError(null);
     try {
-      const response = await fetch("/_agent-native/actions/decide_effect", {
+      const response = await fetch("/_agent-native/actions/decide-effect", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ effectIds: selected, decision: "approve" }),

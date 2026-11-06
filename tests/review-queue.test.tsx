@@ -8,11 +8,11 @@ import { closeDbExec, getDbExec } from "@agent-native/core/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import advanceJob from "../actions/advance_job.js";
-import createJob from "../actions/create_job.js";
-import decideEffect from "../actions/decide_effect.js";
-import listEffects from "../actions/list_effects.js";
-import proposeEffect from "../actions/propose_effect.js";
+import advanceJob from "../actions/advance-job.js";
+import createJob from "../actions/create-job.js";
+import decideEffect from "../actions/decide-effect.js";
+import listEffects from "../actions/list-effects.js";
+import proposeEffect from "../actions/propose-effect.js";
 import QueueCard from "../app/components/review/QueueCard.js";
 import { QUEUE_ACTION_LABELS } from "../app/routes/review.js";
 import { getDb } from "../server/db/index.js";
@@ -63,7 +63,7 @@ async function jobWithProposal(title = "Review me") {
   return { jobId: created.id, effectId: proposed.id };
 }
 
-describe("propose_effect", () => {
+describe("propose-effect", () => {
   beforeAll(async () => {
     await applyMigrations();
   });
@@ -84,7 +84,7 @@ describe("propose_effect", () => {
     expect(proposed.message).toBe("Pending review");
   });
 
-  it("appears in list_effects with the draft fields lifted", async () => {
+  it("appears in list-effects with the draft fields lifted", async () => {
     const { effectId } = await jobWithProposal("Listed draft");
     const rows = await listEffects.run({});
     const row = rows.find((entry) => entry.id === effectId)!;
@@ -122,7 +122,7 @@ describe("propose_effect", () => {
   });
 });
 
-describe("decide_effect", () => {
+describe("decide-effect", () => {
   beforeAll(async () => {
     await applyMigrations();
   });
@@ -143,7 +143,7 @@ describe("decide_effect", () => {
     expect(contractError(blank)).toEqual({ errorCode: "feedback_required", statusCode: 400 });
   });
 
-  it("approve flips list_effects to approved with exactly one decision row", async () => {
+  it("approve flips list-effects to approved with exactly one decision row", async () => {
     const { effectId } = await jobWithProposal("Approve me");
     const db = getDb();
     const before = await db.select().from(decisions).where(eq(decisions.effectId, effectId));
