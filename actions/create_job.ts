@@ -11,7 +11,7 @@ export default defineAction({
   description: "Create a chase-up job in planning.",
   schema: z.object({
     template: z.string().min(1).default("chase-up").describe("Job template, e.g. chase-up"),
-    title: z.string().min(1).describe("Job title"),
+    title: z.string().min(1).default("Chase-up sweep").describe("Job title"),
   }),
   outputSchema: z.object({
     id: z.string(),
