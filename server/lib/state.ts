@@ -72,7 +72,7 @@ export async function transitionJob(db: Db, id: string, to: JobState) {
   }
   if (to === "complete") {
     const prior = await db.select().from(decisions).where(eq(decisions.jobId, id));
-    if (!prior.some((d) => d.decision === "approve")) {
+    if (!prior.some((d) => d.decision === "approve" || d.decision === "edit")) {
       return jobErrors.fail(
         "Job completion requires human approval.",
         "policy_blocked",
