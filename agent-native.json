@@ -4,6 +4,16 @@
     "firstRun": "off"
   },
   "doctor": {
+    "dbToolScopingDenylist": {
+      "jobs": "Single-user demo table with no per-user rows; tenant scoping arrives additively in a later lap — reviewed for issue #3.",
+      "threads": "Single-user demo table with no per-user rows; tenant scoping arrives additively in a later lap — reviewed for issue #3.",
+      "messages": "Single-user demo table with no per-user rows; tenant scoping arrives additively in a later lap — reviewed for issue #3.",
+      "proposed_effects": "Single-user demo table with no per-user rows; tenant scoping arrives additively in a later lap — reviewed for issue #3.",
+      "decisions": "Single-user demo table with no per-user rows; tenant scoping arrives additively in a later lap — reviewed for issue #3.",
+      "policies": "Single-user demo table with no per-user rows; tenant scoping arrives additively in a later lap — reviewed for issue #3.",
+      "audit_events": "Single-user demo table with no per-user rows; tenant scoping arrives additively in a later lap — reviewed for issue #3.",
+      "learnings": "Single-user demo table with no per-user rows; tenant scoping arrives additively in a later lap — reviewed for issue #3."
+    },
     "failOnBuild": false
   }
 }
