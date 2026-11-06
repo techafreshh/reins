@@ -9,7 +9,8 @@ import { boolean, index, integer, pgTable, text } from "drizzle-orm/pg-core";
 // actions) and timestamps are TEXT ISO strings defaulting to now().
 export const jobs = pgTable("jobs", {
   id: text("id").primaryKey(),
-  status: text("status").notNull().default("proposed"),
+  status: text("status").notNull().default("planning"),
+  template: text("template").notNull().default(""),
   title: text("title").notNull().default(""),
   summary: text("summary").notNull().default(""),
   attemptCount: integer("attempt_count").notNull().default(0),

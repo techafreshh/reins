@@ -15,6 +15,13 @@
       "when": 1793926167781,
       "tag": "0001_rapid_dagger",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793927345612,
+      "tag": "0002_naive_rhodey",
+      "breakpoints": true
     }
   ]
 }
