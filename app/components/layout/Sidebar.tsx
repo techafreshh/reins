@@ -35,6 +35,8 @@ import {
 import { APP_TITLE } from "@/lib/app-config";
 
 const REVIEW_PATH = "/review";
+const JOBS_PATH = "/jobs";
+const AUDIT_PATH = "/audit";
 const TRUST_PATH = "/trust";
 const LEARNINGS_PATH = "/learnings";
 import { chatThreadPath, HOME_PATH, threadIdFromPath } from "@/lib/chat-paths";
@@ -185,6 +187,72 @@ function ReviewQueueNavLink({ collapsed }: { collapsed: boolean }) {
       <Tooltip>
         <TooltipTrigger asChild>{link}</TooltipTrigger>
         <TooltipContent side="right">Review Queue</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return <div className="px-2">{link}</div>;
+}
+
+function JobsNavLink({ collapsed }: { collapsed: boolean }) {
+  const location = useLocation();
+  const active = location.pathname === JOBS_PATH;
+  const link = (
+    <Link
+      to={JOBS_PATH}
+      aria-current={active ? "page" : undefined}
+      aria-label={collapsed ? "Jobs" : undefined}
+      className={cn(
+        "flex items-center text-sidebar-accent-foreground transition-colors hover:bg-sidebar-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+        active && "bg-sidebar-accent",
+        collapsed
+          ? "size-8 justify-center rounded-md"
+          : "h-8 w-full gap-3 rounded-lg px-3 text-sm font-medium",
+      )}
+    >
+      <IconInbox className="size-4 shrink-0" strokeWidth={1.8} />
+      <span className={collapsed ? "sr-only" : "truncate"}>Jobs</span>
+    </Link>
+  );
+
+  if (collapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipContent side="right">Jobs</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return <div className="px-2">{link}</div>;
+}
+
+function AuditNavLink({ collapsed }: { collapsed: boolean }) {
+  const location = useLocation();
+  const active = location.pathname === AUDIT_PATH;
+  const link = (
+    <Link
+      to={AUDIT_PATH}
+      aria-current={active ? "page" : undefined}
+      aria-label={collapsed ? "Audit" : undefined}
+      className={cn(
+        "flex items-center text-sidebar-accent-foreground transition-colors hover:bg-sidebar-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+        active && "bg-sidebar-accent",
+        collapsed
+          ? "size-8 justify-center rounded-md"
+          : "h-8 w-full gap-3 rounded-lg px-3 text-sm font-medium",
+      )}
+    >
+      <IconShieldCheck className="size-4 shrink-0" strokeWidth={1.8} />
+      <span className={collapsed ? "sr-only" : "truncate"}>Audit</span>
+    </Link>
+  );
+
+  if (collapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipContent side="right">Audit</TooltipContent>
       </Tooltip>
     );
   }
@@ -514,6 +582,8 @@ export function Sidebar({
       >
         <HomeNavLink collapsed={collapsed} />
         <ReviewQueueNavLink collapsed={collapsed} />
+        <JobsNavLink collapsed={collapsed} />
+        <AuditNavLink collapsed={collapsed} />
         <TrustNavLink collapsed={collapsed} />
         <LearningsNavLink collapsed={collapsed} />
         <ChatThreadsSection collapsed={collapsed} />
