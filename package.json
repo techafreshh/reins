@@ -7,6 +7,7 @@
   "scripts": {
     "migrate:production": "tsx scripts/migrate-production.ts && pnpm migrate",
     "migrate": "agent-native db-migrate",
+    "seed:demo": "pnpm migrate && tsx server/db/seed.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "agent-native db-migrate",
     "dev": "agent-native dev --open",
