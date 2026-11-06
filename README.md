@@ -63,8 +63,8 @@ Probe surfaces:
 - `GET /api/health` → `200` with exactly `{"status":"ok","skeleton":true}`.
 - `GET /` → `200` HTML placeholder containing `Reins skeleton live` (skeleton v0.1.0) with links to `/home` and `/chat`.
 
-No external services are required (`docker-compose.yml` is an intentionally
-empty-services stub; local state is file-backed PGlite).
+No external services are required for local dev (`docker-compose.yml` defines the
+production VPS deploy: app + postgres; local state is file-backed PGlite).
 
 ## Demo account
 
