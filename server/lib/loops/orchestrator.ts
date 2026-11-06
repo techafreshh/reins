@@ -62,7 +62,7 @@ export async function ensureFanout(jobId: string): Promise<void> {
     .where(eq(messages.jobId, jobId));
   const has = (role: string): boolean =>
     existing.some((row) => row.role === role);
-  if (has("drafter") && has("tracker")) {
+  if (has("orchestrator") && has("drafter") && has("tracker")) {
     return;
   }
   const seeds: Array<{ role: string; body: string }> = [];
