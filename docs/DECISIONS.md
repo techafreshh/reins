@@ -156,6 +156,24 @@
   attempt (`kind: "steer_queued"`, queue mode) and never throws, so bridge
   failure can never fail a steer.
 
+## D9 — Job digest is read-only synthesis; the nightly sweep stays a scheduled seed row
+
+- `digest_completed_job` (issue #12) synthesizes the end-of-job roundup from
+  existing rows only (`proposed_effects` statuses, `audit_events`
+  `kind="execute"` effect ids, `threads` skip signals) via the pure
+  `server/lib/digest.ts` counter (`buildDigest` + `readDigestForJob`). The
+  action performs zero writes from any state — planning through complete —
+  so the digest provably never completes a job; only a human `advance_job`
+  to `complete` completes.
+- The nightly sweep is a skeleton, not a live cron: the `nightly-sweep`
+  plugin (`server/plugins/nightly-sweep.ts`) fires the idempotent
+  `ensureNightlySweepJob()` row insert (fixed id `sweep-job-nightly-001`,
+  template `nightly-sweep`, starting state `planning`) at server boot, and
+  the choreographed demo seed covers scenario runs. The sweep stays a
+  scheduled seed-row fallback with choreographed demo seeding instead of
+  in-process scheduling, because a real scheduler is env-gated off under
+  PGlite and unobservable to the black-box probes.
+
 ## Net effect on the plan
 
 - Spike ledger: 5/5 lands on first-choice documented paths; the design doc's
