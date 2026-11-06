@@ -4,6 +4,9 @@ import { redirect, useLoaderData, useRevalidator, type LoaderFunctionArgs } from
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import QueueCard, { type QueueActionLabels, type QueueEffect } from "@/components/review/QueueCard";
+import { SIMULATED_OUTBOX_NOTE } from "../../server/lib/effects.js";
+
+export { SIMULATED_OUTBOX_NOTE };
 
 /**
  * Queue action copy. Single-sourced in the loader (not in the components)
@@ -140,6 +143,9 @@ export default function ReviewRoute() {
         <h1 className="text-2xl font-bold">Review Queue</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Nothing reaches the outside world until a human approves it here.
+        </p>
+        <p className="mt-2 inline-flex w-fit rounded-full border px-3 py-1 text-xs text-muted-foreground">
+          {SIMULATED_OUTBOX_NOTE}
         </p>
       </header>
 
