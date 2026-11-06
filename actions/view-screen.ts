@@ -5,17 +5,24 @@ import { z } from "zod";
 export default defineAction({
   description:
     "Read the Chat app's current navigation state. Basic navigation is already included in <current-screen>; use this action only when you need a fresh read.",
-  schema: z.object({}),
-  http: false,
+  schema: z.object({
+    screen: z.string().optional().describe("Screen path to echo back, e.g. /review"),
+  }),
+  http: { method: "POST" },
   readOnly: true,
-  run: async () => {
+  run: async (args) => {
     const navigation = await readAppState("navigation");
 
     const screen: Record<string, unknown> = {};
-    if (navigation) screen.navigation = navigation;
-
-    if (Object.keys(screen).length === 0) {
+    if (args.screen) {
+      screen.screen = args.screen;
+    }
+    if (navigation) {
+      screen.navigation = navigation;
+    } else if (!args.screen) {
       return "No application state found. Is the app running?";
+    } else {
+      screen.navigation = null;
     }
     return screen;
   },

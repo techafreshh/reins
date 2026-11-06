@@ -8,19 +8,22 @@ export default defineAction({
   schema: z.object({
     view: z.string().optional().describe("View name to navigate to"),
     path: z.string().optional().describe("URL path to navigate to"),
+    screen: z.string().optional().describe("Screen path alias for path, e.g. /jobs"),
     threadId: z.string().optional().describe("Chat thread ID to open"),
   }),
-  http: false,
+  http: { method: "POST" },
   run: async (args) => {
-    if (!args.view && !args.path) {
+    const targetPath = args.path ?? args.screen;
+    if (!args.view && !targetPath) {
       throw new Error("At least --view or --path is required.");
     }
     const nav: Record<string, string> = {};
     if (args.view) nav.view = args.view;
-    if (args.path) nav.path = args.path;
+    if (targetPath) nav.path = targetPath;
+    if (args.screen) nav.screen = args.screen;
     if (args.threadId) nav.threadId = args.threadId;
     nav._writeId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     await writeAppStateForCurrentTab("navigate", nav);
-    return `Navigating to ${args.view || args.path}`;
+    return `Navigating to ${args.view || targetPath}`;
   },
 });

@@ -227,7 +227,7 @@ export async function seedDemo(options: { force?: boolean } = {}): Promise<SeedR
     .values({
       id: DEMO_JOB_ID,
       status: "running",
-      title: "Demo stakeholder chase",
+      title: "Chase-up sweep",
       summary: "Deterministic demo world: 7 synthetic stakeholder threads.",
     })
     .onConflictDoNothing({ target: jobs.id });
@@ -270,6 +270,7 @@ export async function seedDemo(options: { force?: boolean } = {}): Promise<SeedR
     jobId: DEMO_JOB_ID,
     kind: "seed.demo",
     payload: JSON.stringify({ threads: DEMO_THREADS.length, force }),
+    createdAt: new Date().toISOString(),
   });
 
   return {
