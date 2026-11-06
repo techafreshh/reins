@@ -222,6 +222,40 @@ describe("decide-effect", () => {
     ]);
   });
 
+  it("batch with a missing id writes nothing", async () => {
+    const valid = await jobWithProposal("Atomic batch valid");
+    const failure = await decideEffect
+      .run({ effectIds: [valid.effectId, "eff_missing"], decision: "approve" })
+      .catch((e) => e);
+    expect(contractError(failure)).toEqual({ errorCode: "effect_not_found", statusCode: 404 });
+    expect(await listEffects.run({ effectId: valid.effectId })).toMatchObject([
+      { status: "pending_review" },
+    ]);
+    const db = getDb();
+    const rows = await db.select().from(decisions).where(eq(decisions.effectId, valid.effectId));
+    expect(rows).toHaveLength(0);
+  });
+
+  it("batch with a conflicting prior decision writes nothing", async () => {
+    const pending = await jobWithProposal("Atomic batch pending");
+    const approved = await jobWithProposal("Atomic batch approved");
+    await decideEffect.run({ effectId: approved.effectId, decision: "approve" });
+    const failure = await decideEffect
+      .run({
+        effectIds: [pending.effectId, approved.effectId],
+        decision: "reject",
+        feedback: "x",
+      })
+      .catch((e) => e);
+    expect(contractError(failure)).toEqual({ errorCode: "effect_decided", statusCode: 409 });
+    expect(await listEffects.run({ effectId: pending.effectId })).toMatchObject([
+      { status: "pending_review" },
+    ]);
+    const db = getDb();
+    const rows = await db.select().from(decisions).where(eq(decisions.effectId, pending.effectId));
+    expect(rows).toHaveLength(0);
+  });
+
   it("returns 404 for unknown effect ids", async () => {
     const failure = await decideEffect
       .run({ effectId: "eff_missing", decision: "approve" })
