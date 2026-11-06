@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { randomUUID } from "node:crypto";
 
 import { isActionContractError } from "@agent-native/core/action";
 import { closeDbExec, getDbExec } from "@agent-native/core/db";
+import { getChangesSince } from "@agent-native/core/server/poll";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -12,7 +14,7 @@ import assignTask from "../actions/assign-task.js";
 import createJob from "../actions/create-job.js";
 import getJobFeed from "../actions/get-job-feed.js";
 import { getDb } from "../server/db/index.js";
-import { auditEvents, decisions, messages } from "../server/db/schema.js";
+import { auditEvents, decisions, jobs, messages } from "../server/db/schema.js";
 import { ensureFanout, groupFeedForJob } from "../server/lib/loops/orchestrator.js";
 import { startJobFeedHeartbeat, stopJobFeedHeartbeat } from "../server/lib/loops/heartbeat.js";
 
@@ -255,5 +257,30 @@ describe("job feed heartbeat", () => {
 
     const after = await db.select().from(messages).where(eq(messages.jobId, jobId));
     expect(after.length).toBe(before.length);
+  });
+
+  it("emits a heartbeat frame for every running job past the old 50 cap", async () => {
+    const db = getDb();
+    const ids = Array.from({ length: 65 }, () => randomUUID());
+    await db.insert(jobs).values(
+      ids.map((id) => ({ id, status: "running", template: "chase-up", title: "Heartbeat fleet" })),
+    );
+    const messagesBefore = (await db.select({ id: messages.id }).from(messages)).length;
+    const baseline = getChangesSince(0).version;
+
+    startJobFeedHeartbeat(25);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    stopJobFeedHeartbeat();
+
+    const seen = new Set(
+      getChangesSince(baseline)
+        .events.filter((event) => event.source === "jobs")
+        .map((event) => event.key),
+    );
+    for (const id of ids) {
+      expect(seen.has(id)).toBe(true);
+    }
+    const messagesAfter = (await db.select({ id: messages.id }).from(messages)).length;
+    expect(messagesAfter).toBe(messagesBefore);
   });
 });
