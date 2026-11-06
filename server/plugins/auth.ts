@@ -6,6 +6,6 @@ export default createToolkitAuthPlugin({
   // "/api/health" as an unauthenticated probe, so rootAuth stays off and
   // the health route bypasses the guard. Sign-in, /home and /chat are unchanged.
   rootAuth: false,
-  publicPaths: ["/api/health"],
+  publicPaths: ["/api/health", "/demo"],
   marketing: false,
 });

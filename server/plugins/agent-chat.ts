@@ -10,6 +10,7 @@ const INITIAL_TOOL_NAMES = [
   "view-screen",
   "navigate",
   "hello",
+  "list_threads",
   "provider-api-request",
   "ask-question",
 ];

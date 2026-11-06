@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, pgTable, text } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, text } from "drizzle-orm/pg-core";
 
 // Domain tables for jobs, threads, effects, decisions, policies, audit, and
 // learnings. Every NOT NULL column carries a DEFAULT so later additive
@@ -28,6 +28,15 @@ export const threads = pgTable(
     jobId: text("job_id").notNull().default(""),
     title: text("title").notNull().default(""),
     messageCount: integer("message_count").notNull().default(0),
+    stakeholder: text("stakeholder").notNull().default(""),
+    contactEmail: text("contact_email").notNull().default(""),
+    snippet: text("snippet").notNull().default(""),
+    lastMessageAt: text("last_message_at")
+      .notNull()
+      .default(sql`now()`),
+    sensitive: boolean("sensitive").notNull().default(false),
+    promisedDateMissed: boolean("promised_date_missed").notNull().default(false),
+    stalenessDays: integer("staleness_days").notNull().default(0),
     createdAt: text("created_at")
       .notNull()
       .default(sql`now()`),
