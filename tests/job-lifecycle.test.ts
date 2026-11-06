@@ -115,6 +115,31 @@ describe("job lifecycle actions", () => {
     expect(typeof entry.updatedAt).toBe("string");
   });
 
+  it("filters by state at query level", async () => {
+    const planning = await createJob.run({ template: "chase-up", title: "Stays planning" });
+    const runner = await createJob.run({ template: "chase-up", title: "Becomes running" });
+    await advanceJob.run({ id: runner.id, to: "running" });
+
+    const onlyPlanning = await listJobs.run({ state: "planning" });
+    expect(onlyPlanning.map((row) => row.id)).toContain(planning.id);
+    expect(onlyPlanning.map((row) => row.id)).not.toContain(runner.id);
+    expect(onlyPlanning.every((row) => row.state === "planning")).toBe(true);
+
+    const onlyRunning = await listJobs.run({ state: "running" });
+    expect(onlyRunning.map((row) => row.id)).toContain(runner.id);
+    expect(onlyRunning.map((row) => row.id)).not.toContain(planning.id);
+    expect(onlyRunning.every((row) => row.state === "running")).toBe(true);
+  });
+
+  it("caps rows at limit with newest-first order", async () => {
+    const all = await listJobs.run({ limit: 200 });
+    expect(all.length).toBeGreaterThan(1);
+    const [newest] = await listJobs.run({ limit: 1 });
+    expect(newest).toEqual(all[0]);
+    const firstThree = await listJobs.run({ limit: 3 });
+    expect(firstThree).toEqual(all.slice(0, 3));
+  });
+
   it("advances planning to awaiting_review, then steer bounces back to running", async () => {
     const created = await createJob.run({ template: "chase-up", title: "Steer me" });
 
