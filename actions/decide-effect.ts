@@ -93,7 +93,10 @@ export default defineAction({
     }
     const ids = [...new Set([...(effectId ? [effectId] : []), ...(effectIds ?? [])])];
     const db = getDb();
-    const decided: { effectId: string; status: EffectStatus }[] = [];
+    // Validate everything before deciding anything: a half-decided batch
+    // would leave ambiguous retry/cleanup state.
+    const toDecide: { id: string; effect: typeof proposedEffects.$inferSelect; needsWrite: boolean }[] =
+      [];
     for (const id of ids) {
       const rows = await db.select().from(proposedEffects).where(eq(proposedEffects.id, id));
       const effect = rows[0];
@@ -103,7 +106,7 @@ export default defineAction({
       const prior = await db.select().from(decisions).where(eq(decisions.effectId, id));
       const same = prior.find((row) => row.decision === canonical);
       if (same) {
-        decided.push({ effectId: id, status: effect.status as EffectStatus });
+        toDecide.push({ id, effect, needsWrite: false });
         continue;
       }
       const firstPrior = prior[0];
@@ -113,6 +116,14 @@ export default defineAction({
           "effect_decided",
           { statusCode: 409 },
         );
+      }
+      toDecide.push({ id, effect, needsWrite: true });
+    }
+    const decided: { effectId: string; status: EffectStatus }[] = [];
+    for (const { id, effect, needsWrite } of toDecide) {
+      if (!needsWrite) {
+        decided.push({ effectId: id, status: effect.status as EffectStatus });
+        continue;
       }
       const status = TERMINAL_STATUS[canonical];
       const now = new Date().toISOString();
