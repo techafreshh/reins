@@ -5,8 +5,9 @@ import type { H3Event } from "h3";
 /**
  * Per-hour agent-turn cap (PRD appendix default: 20 turns/hour/source).
  *
- * HTTP-only enforcement lives in `server/middleware/auth.ts`: POSTs to the
- * agent-chat runtime past this cap get 429 before the auth guard runs.
+ * HTTP-only enforcement lives in `server/middleware/auth.ts`: the auth guard
+ * runs first, and only guard-approved POSTs to the agent-chat runtime are
+ * recorded — past this cap such turns get 429.
  * Action `run()` functions are untouched, so `pnpm test` stays hermetic
  * (unit tests invoke `run()` dozens of times per process), and CLI calls
  * (separate process, in-process dispatcher) are unaffected.
