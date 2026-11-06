@@ -1,4 +1,4 @@
-# Chat
+# Reins
 
 The minimal agent-native starter app — a clean, ChatGPT-style shell with chat at
 the center, durable threads, standard app navigation, auth, live sync, and
@@ -7,7 +7,7 @@ committing to a domain template.
 
 **Live app: [chat.agent-native.com](https://chat.agent-native.com?utm_source=github&utm_medium=referral&utm_content=chat-readme)**
 
-Chat is the basic agent-native app starting point. It gives you the app-agent
+Reins is the basic agent-native app starting point. It gives you the app-agent
 loop wired end to end and one example action, so you can add your own UI, data,
 and actions on top.
 
