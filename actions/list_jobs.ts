@@ -1,38 +1,6 @@
-import { defineAction } from "@agent-native/core/action";
-import { desc } from "drizzle-orm";
-import { z } from "zod";
+// Legacy snake_case alias: preserves the `GET /_agent-native/actions/list_jobs`
+// HTTP path. The canonical implementation lives in `./list-jobs.js`; this alias
+// stays hidden from agent/MCP tool lists while remaining callable over HTTP.
+import canonical from "./list-jobs.js";
 
-import { getDb } from "../server/db/index.js";
-import { jobs } from "../server/db/schema.js";
-import { JOB_STATES, jobErrors } from "../server/lib/state.js";
-
-const jobSummarySchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  state: z.enum(JOB_STATES),
-  updatedAt: z.string(),
-});
-
-export default defineAction({
-  description: "List jobs newest-first, optionally filtered by state.",
-  schema: z.object({
-    state: z.enum(JOB_STATES).optional().describe("Filter by job state"),
-    limit: z.coerce.number().int().min(1).max(200).default(50).describe("Max jobs to return"),
-  }),
-  outputSchema: z.array(jobSummarySchema),
-  errors: jobErrors,
-  http: { method: "GET" },
-  run: async ({ state, limit }) => {
-    const db = getDb();
-    const rows = await db.select().from(jobs).orderBy(desc(jobs.updatedAt));
-    return rows
-      .filter((row) => (state ? row.status === state : true))
-      .slice(0, limit)
-      .map((row) => ({
-        id: row.id,
-        title: row.title,
-        state: row.status as (typeof JOB_STATES)[number],
-        updatedAt: row.updatedAt,
-      }));
-  },
-});
+export default { ...canonical, agentTool: false, mcpTool: false };

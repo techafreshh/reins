@@ -1,32 +1,6 @@
-import { defineAction } from "@agent-native/core/action";
-import { z } from "zod";
+// Legacy snake_case alias: preserves the `GET /_agent-native/actions/get_policy`
+// HTTP path. The canonical implementation lives in `./get-policy.js`; this alias
+// stays hidden from agent/MCP tool lists while remaining callable over HTTP.
+import canonical from "./get-policy.js";
 
-import { getDb } from "../server/db/index.js";
-import {
-  getCapabilityLevel,
-  isKillSwitchOn,
-  policyErrors,
-  TRUST_CAPABILITIES,
-  type PolicyLevel,
-  type TrustCapability,
-} from "../server/lib/policy.js";
-
-export default defineAction({
-  description: "Read the per-capability trust levels and the global kill switch.",
-  schema: z.object({}),
-  http: { method: "GET" },
-  errors: policyErrors,
-  run: async () => {
-    const db = getDb();
-    const levels = {} as Record<TrustCapability, PolicyLevel>;
-    for (const capability of TRUST_CAPABILITIES) {
-      levels[capability] = await getCapabilityLevel(db, capability);
-    }
-    return {
-      killSwitch: await isKillSwitchOn(db),
-      levels,
-      send_followup: levels.send_followup,
-      message: "Policy loaded",
-    };
-  },
-});
+export default { ...canonical, agentTool: false, mcpTool: false };
