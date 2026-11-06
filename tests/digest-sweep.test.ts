@@ -9,12 +9,12 @@ import { closeDbExec, getDbExec } from "@agent-native/core/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import advanceJob from "../actions/advance_job.js";
-import createJob from "../actions/create_job.js";
-import decideEffect from "../actions/decide_effect.js";
-import digestCompletedJob from "../actions/digest_completed_job.js";
-import getJobState from "../actions/get_job_state.js";
-import proposeEffect from "../actions/propose_effect.js";
+import advanceJob from "../actions/advance-job.js";
+import createJob from "../actions/create-job.js";
+import decideEffect from "../actions/decide-effect.js";
+import digestCompletedJob from "../actions/digest-completed-job.js";
+import getJobState from "../actions/get-job-state.js";
+import proposeEffect from "../actions/propose-effect.js";
 import JobDigest from "../app/components/jobs/JobDigest.js";
 import { getDb } from "../server/db/index.js";
 import { jobs, threads } from "../server/db/schema.js";
@@ -59,7 +59,7 @@ const DRAFT = {
   body: "nudge",
 };
 
-describe("digest_completed_job", () => {
+describe("digest-completed-job", () => {
   beforeAll(async () => {
     await applyMigrations();
   });

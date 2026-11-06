@@ -7,13 +7,13 @@ import { closeDbExec, getDbExec } from "@agent-native/core/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import advanceJob from "../actions/advance_job.js";
-import createJob from "../actions/create_job.js";
-import decideEffect from "../actions/decide_effect.js";
-import listAudit from "../actions/list_audit.js";
-import listJobs from "../actions/list_jobs.js";
-import proposeEffect from "../actions/propose_effect.js";
-import steerJob from "../actions/steer_job.js";
+import advanceJob from "../actions/advance-job.js";
+import createJob from "../actions/create-job.js";
+import decideEffect from "../actions/decide-effect.js";
+import listAudit from "../actions/list-audit.js";
+import listJobs from "../actions/list-jobs.js";
+import proposeEffect from "../actions/propose-effect.js";
+import steerJob from "../actions/steer-job.js";
 import { getDb } from "../server/db/index.js";
 import { decisions, jobs } from "../server/db/schema.js";
 import { DEMO_JOB_ID, DEMO_THREADS, seedDemo } from "../server/lib/demo.js";
@@ -74,7 +74,7 @@ describe("transparency", () => {
     expect(TRANSITIONS.complete).toEqual([]);
 
     // The single documented backward move: the steer bounce
-    // `awaiting_review -> running` via `steer_job`.
+    // `awaiting_review -> running` via `steer-job`.
     const created = await createJob.run({ template: "chase-up", title: "State matrix sweep" });
     await advanceJob.run({ id: created.id, to: "running" });
     await advanceJob.run({ id: created.id, to: "awaiting_review" });

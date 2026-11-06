@@ -7,10 +7,10 @@ import { closeDbExec, getDbExec } from "@agent-native/core/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import advanceJob from "../actions/advance_job.js";
-import createJob from "../actions/create_job.js";
-import getJobState from "../actions/get_job_state.js";
-import steerJob from "../actions/steer_job.js";
+import advanceJob from "../actions/advance-job.js";
+import createJob from "../actions/create-job.js";
+import getJobState from "../actions/get-job-state.js";
+import steerJob from "../actions/steer-job.js";
 import { getDb } from "../server/db/index.js";
 import { auditEvents, messages } from "../server/db/schema.js";
 import { pipeSteeringToLiveThread } from "../server/lib/chat-bridge.js";
@@ -48,7 +48,7 @@ async function runningJob(title: string): Promise<string> {
   return created.id;
 }
 
-describe("steer_job from running", () => {
+describe("steer-job from running", () => {
   beforeAll(async () => {
     await applyMigrations();
   });
@@ -65,7 +65,7 @@ describe("steer_job from running", () => {
       id: jobId,
       message: "Steering acknowledged",
       state: "running",
-      nextRequiredAction: "advance_job",
+      nextRequiredAction: "advance-job",
     });
     expect(await getJobState.run({ id: jobId })).toMatchObject({ state: "running" });
   });
@@ -149,18 +149,18 @@ describe("steer_job from running", () => {
     expect(
       steerJob.changeResource?.(
         { jobId: "job_1", instruction: "widen scope" },
-        { id: "job_1", message: "Steering acknowledged", state: "running", nextRequiredAction: "advance_job" },
+        { id: "job_1", message: "Steering acknowledged", state: "running", nextRequiredAction: "advance-job" },
       ),
     ).toEqual({ resourceType: "job", resourceId: "job_1" });
     expect(
       steerJob.changeResource?.(
         { id: "job_2", instruction: "widen scope" },
-        { id: "job_2", message: "Steering acknowledged", state: "running", nextRequiredAction: "advance_job" },
+        { id: "job_2", message: "Steering acknowledged", state: "running", nextRequiredAction: "advance-job" },
       ),
     ).toEqual({ resourceType: "job", resourceId: "job_2" });
   });
 
-  it("exposes audit rows oldest-first on get_job_state", async () => {
+  it("exposes audit rows oldest-first on get-job-state", async () => {
     const jobId = await runningJob("Audit order");
     await steerJob.run({ jobId, instruction: "first steer" });
     await steerJob.run({ jobId, instruction: "second steer" });
