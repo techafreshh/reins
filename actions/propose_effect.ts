@@ -5,8 +5,9 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { getDb } from "../server/db/index.js";
-import { auditEvents, jobs, proposedEffects } from "../server/db/index.js";
+import { auditEvents, jobs, learnings, proposedEffects } from "../server/db/index.js";
 import { EFFECT_STATUS, newEffectId, sendFollowupPayloadSchema } from "../server/lib/effects.js";
+import { applyApprovedRules } from "../server/lib/learnings.js";
 import {
   evaluateSendFollowup,
   getCapabilityLevel,
@@ -25,6 +26,7 @@ export default defineAction({
     id: z.string(),
     message: z.string(),
     status: z.enum(EFFECT_STATUS),
+    body: z.string(),
   }),
   errors: policyErrors,
   changeResource: (input, result) =>
@@ -41,11 +43,20 @@ export default defineAction({
         statusCode: 409,
       });
     }
+    // Learning loop: approved rules for this job rewrite the draft in-process
+    // so the next proposal cannot repeat rejected phrasing.
+    const learningRows = await db.select().from(learnings).where(eq(learnings.jobId, jobId));
+    const approvedRules = learningRows
+      .filter((row) => row.status === "approved")
+      .map((row) => row.rule)
+      .filter((rule) => rule.length > 0);
+    const sanitized = applyApprovedRules(payload.body, approvedRules);
+    const finalPayload = sanitized.applied ? { ...payload, body: sanitized.body } : payload;
     if ((await getCapabilityLevel(db, capability)) === "SMART") {
       const verdict = await evaluateSendFollowup(db, {
-        body: payload.body,
-        to: payload.to,
-        threadId: payload.threadId,
+        body: finalPayload.body,
+        to: finalPayload.to,
+        threadId: finalPayload.threadId,
       });
       if (!verdict.allowed) {
         return policyErrors.fail(
@@ -61,8 +72,8 @@ export default defineAction({
       id,
       jobId,
       kind: capability,
-      summary: payload.subject,
-      payload: JSON.stringify(payload),
+      summary: finalPayload.subject,
+      payload: JSON.stringify(finalPayload),
       status: "pending_review",
       createdAt: now,
       updatedAt: now,
@@ -73,10 +84,19 @@ export default defineAction({
       kind: "propose",
       payload: JSON.stringify({ effectId: id, capability }),
     });
+    if (sanitized.applied) {
+      await db.insert(auditEvents).values({
+        id: randomUUID(),
+        jobId,
+        kind: "learning_applied",
+        payload: JSON.stringify({ effectId: id, rules: approvedRules }),
+      });
+    }
     return {
       id,
       message: "Pending review",
       status: "pending_review" as const,
+      body: finalPayload.body,
     };
   },
 });
