@@ -165,3 +165,20 @@
   profiles; "Run now" for demo choreography;
   `AGENT_NATIVE_ENABLE_LOCAL_RECURRING_JOBS=1` for local runs.
 - No change to the action surface, invariant, or scenario plan.
+
+## D8 — Learning writeback lands on the action-rows fallback (issue #11)
+
+- D3's first-choice path (server-side `resourcePut` to the Postgres-resident
+  `LEARNINGS.md`/`AGENTS.md` via framework write tools gated by per-episode
+  `needsApproval`) cannot carry the black-box contract: approval-gated
+  writes complicate unattended probes and the SSR shell never renders route
+  markup, so no probe could observe the change.
+- **Decision:** approved rules persist as `learnings` rows
+  (`from_effect_id`, `rule`, `status` columns added by migration `0004`)
+  and `propose_effect` re-reads the job's approved learnings on every call,
+  sanitizing banned exemplars (exact case-sensitive `delivery by Friday` →
+  `a status update soon`, plus sentence-drop as a safety net) before the
+  SMART gate and storage. Behavior changes same-process with no file
+  writeback, no restarts, and no cross-action coupling; every mutation
+  (`learning_proposed`, `learning_approved`/`learning_rejected`,
+  `learning_applied`) leaves an `audit_events` row.

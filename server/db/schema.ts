@@ -140,6 +140,9 @@ export const learnings = pgTable(
     title: text("title").notNull().default(""),
     body: text("body").notNull().default(""),
     source: text("source").notNull().default(""),
+    fromEffectId: text("from_effect_id").notNull().default(""),
+    rule: text("rule").notNull().default(""),
+    status: text("status").notNull().default("pending"),
     createdAt: text("created_at")
       .notNull()
       .default(sql`now()`),
