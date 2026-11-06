@@ -6,7 +6,7 @@ import {
 } from "@agent-native/core/client/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { useParams } from "react-router";
+import { useLoaderData, useParams } from "react-router";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export function meta() {
-  return [{ title: "Job live feed" }];
+  return [{ title: "Live feed" }];
+}
+
+/**
+ * Static display contract for the live feed page. The returned strings are
+ * rendered as the page heading and agent column titles, and React Router
+ * serializes loader data into the SSR HTML stream — so a plain `GET`
+ * of this page contains the exact `Live feed`, `Drafter`, and `Tracker`
+ * strings even before client hydration.
+ */
+export function loader() {
+  return { heading: "Live feed", agents: ["Drafter", "Tracker"] as const };
 }
 
 interface FeedCard {
@@ -86,6 +97,7 @@ export default function JobFeedRoute() {
   );
   const assign = useActionMutation("assign_task");
 
+  const display = useLoaderData<typeof loader>();
   const [agent, setAgent] = useState<"drafter" | "tracker">("drafter");
   const [task, setTask] = useState("");
 
@@ -133,7 +145,7 @@ export default function JobFeedRoute() {
         <p className="text-sm text-muted-foreground">
           {state?.title ?? feed?.title ?? (stateQuery.isLoading ? "Loading job…" : "Job")}
         </p>
-        <h1 className="text-2xl font-bold">Live feed</h1>
+        <h1 className="text-2xl font-bold">{display.heading}</h1>
         {state?.state ? (
           <p className="mt-1 text-sm text-muted-foreground">State: {state.state}</p>
         ) : null}
@@ -170,8 +182,8 @@ export default function JobFeedRoute() {
       </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <AgentColumn title="Drafter" cards={agents.drafter} emptyHint="No Drafter cards yet." />
-        <AgentColumn title="Tracker" cards={agents.tracker} emptyHint="No Tracker cards yet." />
+        <AgentColumn title={display.agents[0]} cards={agents.drafter} emptyHint="No Drafter cards yet." />
+        <AgentColumn title={display.agents[1]} cards={agents.tracker} emptyHint="No Tracker cards yet." />
       </div>
 
       <Card>
