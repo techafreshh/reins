@@ -6,14 +6,20 @@ import { z } from "zod";
 
 import { getDb } from "../server/db/index.js";
 import { auditEvents, jobs, messages } from "../server/db/schema.js";
+import { pipeSteeringToLiveThread } from "../server/lib/chat-bridge.js";
 import { JOB_STATES, jobErrors, transitionJob } from "../server/lib/state.js";
 
 export default defineAction({
-  description: "Append a steering instruction and bounce the job back to running.",
-  schema: z.object({
-    id: z.string().min(1).describe("Job id, e.g. job_..."),
-    instruction: z.string().min(1).describe("Steering instruction for the agent loop"),
-  }),
+  description: "Append a steering instruction; running jobs stay running.",
+  schema: z
+    .object({
+      id: z.string().min(1).optional().describe("Job id, e.g. job_... (legacy alias)"),
+      jobId: z.string().min(1).optional().describe("Job id, e.g. job_..."),
+      instruction: z.string().min(1).describe("Steering instruction for the agent loop"),
+    })
+    .refine((v) => Boolean(v.jobId ?? v.id), {
+      message: "Provide jobId (or legacy id).",
+    }),
   outputSchema: z.object({
     id: z.string(),
     message: z.string(),
@@ -21,41 +27,50 @@ export default defineAction({
     nextRequiredAction: z.string(),
   }),
   errors: jobErrors,
-  changeResource: (input) => ({ resourceType: "job", resourceId: input.id }),
-  run: async ({ id, instruction }) => {
+  changeResource: (input) => ({ resourceType: "job", resourceId: input.jobId ?? input.id ?? "" }),
+  run: async (input) => {
+    const jobId = input.jobId ?? input.id ?? "";
+    const { instruction } = input;
     const db = getDb();
-    const rows = await db.select().from(jobs).where(eq(jobs.id, id));
+    const rows = await db.select().from(jobs).where(eq(jobs.id, jobId));
     const job = rows[0];
     if (!job) {
       return jobErrors.fail("Job not found.", "job_not_found", { statusCode: 404 });
     }
-    if (job.status !== "awaiting_review") {
+    if (job.status !== "running" && job.status !== "awaiting_review") {
       return jobErrors.fail(
         `Cannot steer a job in "${job.status}".`,
         "job_paused",
         { statusCode: 409 },
       );
     }
-    const existing = await db.select().from(messages).where(eq(messages.jobId, id));
+    const existing = await db.select().from(messages).where(eq(messages.jobId, jobId));
     const nextSeq = existing.reduce((max, row) => Math.max(max, row.seq), 0) + 1;
     await db.insert(messages).values({
       id: randomUUID(),
       threadId: "",
-      jobId: id,
+      jobId,
       role: "steering",
       body: instruction,
       seq: nextSeq,
     });
     await db.insert(auditEvents).values({
       id: randomUUID(),
-      jobId: id,
+      jobId,
       kind: "steer",
       payload: JSON.stringify({ instruction }),
     });
-    await transitionJob(db, id, "running");
+    if (job.status === "awaiting_review") {
+      await transitionJob(db, jobId, "running");
+    }
+    try {
+      await pipeSteeringToLiveThread(jobId, instruction);
+    } catch {
+      // The bridge never throws; steering persistence above is authoritative.
+    }
     return {
-      id,
-      message: "Steering recorded; job back to running",
+      id: jobId,
+      message: "Steering acknowledged",
       state: "running" as const,
       nextRequiredAction: "advance_job",
     };
