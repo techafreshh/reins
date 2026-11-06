@@ -21,6 +21,7 @@ export default defineAction({
     nextRequiredAction: z.string(),
   }),
   errors: jobErrors,
+  changeResource: (input) => ({ resourceType: "job", resourceId: input.id }),
   run: async ({ id, instruction }) => {
     const db = getDb();
     const rows = await db.select().from(jobs).where(eq(jobs.id, id));

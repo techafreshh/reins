@@ -104,6 +104,32 @@
   allow" caching on the one destructive launcher); the custom Review Queue is
   the product surface; document the 1-hour TTL in the README.
 
+## D6 — Orchestrator fan-out uses tracked rows, not live `agent-teams` spawns
+
+- Beat 1 needs a per-job live feed: one orchestrator log plus two agent
+  cards (Drafter, Tracker) streaming over the framework's
+  `/_agent-native/events` SSE. The issue explicitly allows a fallback of one
+  agent with two tracked thread rows when spawn is unavailable, and the
+  scenario probes run unattended without provider keys — LLM latency and
+  flakiness cannot meet the 5s/10s acceptance budgets, and every acceptance
+  check is satisfiable with DB-visible rows plus SSE frames.
+- **Decision:** deterministic in-process orchestration over the existing
+  `messages`/`audit_events` tables (`server/lib/loops/orchestrator.ts`
+  `ensureFanout` + `groupFeedForJob`): a running job converges to one
+  `orchestrator` log row plus one `drafter` and one `tracker` row
+  (`threadId: ""`, sequential `seq`, `auditEvents` kind `fanout`); reruns
+  insert nothing. New agent cards are plain `messages` rows written by
+  `assign_task` (kind `assign`) and read back by `get_job_feed`.
+- Liveness comes from the framework transport, not a custom socket:
+  `recordChange({ source: "jobs", type: "change", key: jobId })` heartbeat
+  every 2s while any job is `running` (`server/lib/loops/heartbeat.ts`,
+  started by `server/plugins/job-feed.ts`), because framework SSE does not
+  replay history on connect; `changeResource` (`{ resourceType: "job",
+  resourceId }`) on the job actions marks the shareable resource each write
+  changes so collaborators invalidate. No new tables, no migrations, no
+  custom app-owned SSE endpoint, no manual `EventSource` clients.
+- Revisit real `agent-teams` spawns only if a later beat needs model output.
+
 ## Net effect on the plan
 
 - Spike ledger: 5/5 lands on first-choice documented paths; the design doc's

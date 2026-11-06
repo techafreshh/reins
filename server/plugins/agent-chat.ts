@@ -18,6 +18,8 @@ const INITIAL_TOOL_NAMES = [
   "get_job_state",
   "steer_job",
   "advance_job",
+  "assign_task",
+  "get_job_feed",
 ];
 
 export default createAgentChatPlugin({

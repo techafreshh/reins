@@ -2,6 +2,7 @@ import { defineAction } from "@agent-native/core/action";
 import { z } from "zod";
 
 import { getDb } from "../server/db/index.js";
+import { ensureFanout } from "../server/lib/loops/orchestrator.js";
 import { JOB_STATES, jobErrors, transitionJob } from "../server/lib/state.js";
 
 export default defineAction({
@@ -17,9 +18,13 @@ export default defineAction({
     nextRequiredAction: z.string(),
   }),
   errors: jobErrors,
+  changeResource: (input) => ({ resourceType: "job", resourceId: input.id }),
   run: async ({ id, to }) => {
     const db = getDb();
     await transitionJob(db, id, to);
+    if (to === "running") {
+      await ensureFanout(id);
+    }
     return {
       id,
       message: `Job moved to ${to}`,
