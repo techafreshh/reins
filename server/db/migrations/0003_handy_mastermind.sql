@@ -1,0 +1,1 @@
+ALTER TABLE "policies" ADD COLUMN "level" text DEFAULT 'ASK' NOT NULL;
