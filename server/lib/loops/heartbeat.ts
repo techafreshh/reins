@@ -14,6 +14,8 @@ import { jobs } from "../../db/schema.js";
  * `{ source: "jobs", type: "change", key: jobId }` frame per running job.
  * The event carries no owner/org/resourceType, so every authenticated SSE
  * subscriber sees it, and the serialized frame always contains the `jobId`.
+ * The tick pages through all running jobs in bounded batches so fleet-scale
+ * runs past any single-query cap still get a frame per job.
  * The tick only reads; it never writes domain rows.
  */
 
@@ -22,14 +24,23 @@ let timer: NodeJS.Timeout | null = null;
 async function tickOnce(): Promise<void> {
   try {
     const db = getDb();
-    const running = await db
-      .select({ id: jobs.id })
-      .from(jobs)
-      .where(eq(jobs.status, "running"))
-      .orderBy(desc(jobs.updatedAt))
-      .limit(50);
-    for (const job of running) {
-      recordChange({ source: "jobs", type: "change", key: job.id });
+    const PAGE_SIZE = 200;
+    let offset = 0;
+    while (true) {
+      const running = await db
+        .select({ id: jobs.id })
+        .from(jobs)
+        .where(eq(jobs.status, "running"))
+        .orderBy(desc(jobs.updatedAt))
+        .limit(PAGE_SIZE)
+        .offset(offset);
+      for (const job of running) {
+        recordChange({ source: "jobs", type: "change", key: job.id });
+      }
+      if (running.length < PAGE_SIZE) {
+        break;
+      }
+      offset += running.length;
     }
   } catch {
     // A heartbeat must never break its host; the next tick retries.
