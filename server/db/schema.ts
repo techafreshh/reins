@@ -108,6 +108,7 @@ export const policies = pgTable("policies", {
   id: text("id").primaryKey(),
   capability: text("capability").notNull().unique(),
   rule: text("rule").notNull().default(""),
+  level: text("level").notNull().default("ASK"),
   enabled: integer("enabled").notNull().default(1),
   createdAt: text("created_at")
     .notNull()

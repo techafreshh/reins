@@ -7,7 +7,12 @@ import { z } from "zod";
 import { getDb } from "../server/db/index.js";
 import { auditEvents, jobs, proposedEffects } from "../server/db/index.js";
 import { EFFECT_STATUS, newEffectId, sendFollowupPayloadSchema } from "../server/lib/effects.js";
-import { jobErrors } from "../server/lib/state.js";
+import {
+  evaluateSendFollowup,
+  getCapabilityLevel,
+  isKillSwitchOn,
+  policyErrors,
+} from "../server/lib/policy.js";
 
 export default defineAction({
   description: "Propose an outward effect for human review. It stays pending until decided.",
@@ -21,7 +26,7 @@ export default defineAction({
     message: z.string(),
     status: z.enum(EFFECT_STATUS),
   }),
-  errors: jobErrors,
+  errors: policyErrors,
   changeResource: (input, result) =>
     result ? { resourceType: "job", resourceId: input.jobId } : undefined,
   run: async ({ jobId, capability, payload }) => {
@@ -29,7 +34,26 @@ export default defineAction({
     const rows = await db.select().from(jobs).where(eq(jobs.id, jobId));
     const job = rows[0];
     if (!job) {
-      return jobErrors.fail("Job not found.", "job_not_found", { statusCode: 404 });
+      return policyErrors.fail("Job not found.", "job_not_found", { statusCode: 404 });
+    }
+    if (await isKillSwitchOn(db)) {
+      return policyErrors.fail("Kill switch is on; proposing is blocked.", "policy_blocked", {
+        statusCode: 409,
+      });
+    }
+    if ((await getCapabilityLevel(db, capability)) === "SMART") {
+      const verdict = await evaluateSendFollowup(db, {
+        body: payload.body,
+        to: payload.to,
+        threadId: payload.threadId,
+      });
+      if (!verdict.allowed) {
+        return policyErrors.fail(
+          `SMART policy blocked send_followup (${verdict.reason}).`,
+          "trust_below_threshold",
+          { statusCode: 403 },
+        );
+      }
     }
     const id = newEffectId();
     const now = new Date().toISOString();
