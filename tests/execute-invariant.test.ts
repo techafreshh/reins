@@ -145,7 +145,7 @@ describe("execute-approved-effect gate", () => {
     expect(switchedOn.message).toContain("paused");
 
     const blocked = await executeEffect.run({ effectId }).catch((e) => e);
-    expect(contractError(blocked)).toEqual({ errorCode: "job_paused", statusCode: 409 });
+    expect(contractError(blocked)).toEqual({ errorCode: "policy_blocked", statusCode: 409 });
     expect(await executeAuditRows(effectId)).toHaveLength(0);
 
     const switchedOff = await updatePolicy.run({ killSwitch: false });

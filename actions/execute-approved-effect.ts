@@ -13,7 +13,7 @@ export const executeErrors = defineActionErrors(
   "effect_not_found",
   "not_approved",
   "stale_decision",
-  "job_paused",
+  "policy_blocked",
 );
 
 const executedRowSchema = z.object({
@@ -50,7 +50,7 @@ export default defineAction({
     const db = getDb();
     // Kill switch first: a paused system reveals nothing about approval state.
     if (await isKillSwitchOn(db)) {
-      return executeErrors.fail("Job paused by kill switch; execution refused.", "job_paused", {
+      return executeErrors.fail("Kill switch is on; execution refused.", "policy_blocked", {
         statusCode: 409,
       });
     }
