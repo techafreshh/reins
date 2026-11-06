@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { isActionContractError } from "@agent-native/core/action";
 import { closeDbExec, getDbExec } from "@agent-native/core/db";
 import { eq } from "drizzle-orm";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import advanceJob from "../actions/advance-job.js";
 import createJob from "../actions/create-job.js";
@@ -14,7 +14,7 @@ import decideEffect from "../actions/decide-effect.js";
 import listEffects from "../actions/list-effects.js";
 import proposeEffect from "../actions/propose-effect.js";
 import QueueCard from "../app/components/review/QueueCard.js";
-import { QUEUE_ACTION_LABELS } from "../app/routes/review.js";
+import { loader as reviewLoader, QUEUE_ACTION_LABELS } from "../app/routes/review.js";
 import { getDb } from "../server/db/index.js";
 import { decisions } from "../server/db/schema.js";
 import { normalizeDecision } from "../server/lib/effects.js";
@@ -274,6 +274,141 @@ describe("decision normalization", () => {
     expect(normalizeDecision("reject")).toBe("reject");
     expect(normalizeDecision("rejected")).toBe("reject");
     expect(normalizeDecision("bogus")).toBeNull();
+  });
+});
+
+describe("review loader failure signal", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function loadRequest() {
+    // The route lives at /chat; any same-origin URL exercises the loader's
+    // credential-forwarding + list-effects fetch path.
+    return new Request("http://localhost/chat");
+  }
+
+  function queueRow(id: string, status: string) {
+    return {
+      id,
+      jobId: "job_loader",
+      capability: "send_followup",
+      status,
+      payload: { threadId: "th_1", to: "priya@example.com", subject: "Hi", body: "nudge" },
+      to: "priya@example.com",
+      subject: "Hi",
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  it("returns error null with the correct pending/decided split on 200", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(JSON.stringify([queueRow("eff_pending", "pending_review"), queueRow("eff_done", "approved")]), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      ),
+    );
+    const data = await reviewLoader({ request: loadRequest(), params: {} } as never);
+    expect(data.error).toBeNull();
+    expect(data.pending.map((row) => row.id)).toEqual(["eff_pending"]);
+    expect(data.decided.map((row) => row.id)).toEqual(["eff_done"]);
+    expect(data.labels).toEqual(QUEUE_ACTION_LABELS);
+  });
+
+  it("flags an HTTP 500 as an error instead of an empty queue", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("boom", { status: 500 })),
+    );
+    const data = await reviewLoader({ request: loadRequest(), params: {} } as never);
+    expect(data.pending).toEqual([]);
+    expect(data.decided).toEqual([]);
+    expect(data.error).toContain("Couldn't load the review queue");
+    expect(data.labels).toEqual(QUEUE_ACTION_LABELS);
+  });
+
+  it("flags a fetch rejection (abort/timeout/network) as an error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("network down");
+      }),
+    );
+    const data = await reviewLoader({ request: loadRequest(), params: {} } as never);
+    expect(data.pending).toEqual([]);
+    expect(data.decided).toEqual([]);
+    expect(data.error).toContain("Couldn't load the review queue");
+  });
+
+  it("flags non-array JSON and non-JSON bodies as errors", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }),
+      ),
+    );
+    const nonArray = await reviewLoader({ request: loadRequest(), params: {} } as never);
+    expect(nonArray.error).toContain("Couldn't load the review queue");
+    expect(nonArray.pending).toEqual([]);
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("not json", { status: 200 })),
+    );
+    const malformed = await reviewLoader({ request: loadRequest(), params: {} } as never);
+    expect(malformed.error).toContain("Couldn't load the review queue");
+    expect(malformed.pending).toEqual([]);
+  });
+
+  it("still redirects to sign-in on 401", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(null, { status: 401 })),
+    );
+    const failure = await reviewLoader({ request: loadRequest(), params: {} } as never).catch(
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(Response);
+    expect((failure as Response).status).toBe(302);
+    expect((failure as Response).headers.get("Location")).toBe("/");
+  });
+
+  it("renders the failure banner (not the empty-queue card) on loader error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("boom", { status: 500 })),
+    );
+    const data = await reviewLoader({ request: loadRequest(), params: {} } as never);
+    expect(data.error).not.toBeNull();
+    // Mirrors the ReviewRoute conditional: the alert + Retry render when
+    // `error` is set, and the "No effects waiting for review." card is
+    // gated on `!error`, so the two strings never co-render.
+    const html = renderToStaticMarkup(
+      <>
+        {data.error ? (
+          <div className="flex items-center gap-3">
+            <p role="alert" className="text-sm text-destructive">
+              {data.error}
+            </p>
+            <button type="button">Retry</button>
+          </div>
+        ) : null}
+        {data.pending.length === 0 && !data.error ? (
+          <p className="text-sm text-muted-foreground">No effects waiting for review.</p>
+        ) : null}
+      </>,
+    );
+    expect(html).toContain("load the review queue");
+    expect(html).toContain('role="alert"');
+    expect(html).toContain("Retry");
+    expect(html).not.toContain("No effects waiting for review.");
   });
 });
 

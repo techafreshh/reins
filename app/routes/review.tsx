@@ -28,6 +28,7 @@ interface ReviewLoaderData {
   pending: QueueEffect[];
   decided: QueueEffect[];
   labels: typeof QUEUE_ACTION_LABELS;
+  error: string | null;
 }
 
 function isQueueEffect(value: unknown): value is QueueEffect {
@@ -51,11 +52,17 @@ function isQueueEffect(value: unknown): value is QueueEffect {
  * SSR-first queue read: the loader fetches the whole queue over same-origin
  * HTTP (forwarding the viewer's credentials) so the first paint already
  * contains every pending card plus decided status text. Auth failures send
- * the viewer back to sign-in; any other fetch failure degrades to an empty
- * queue that the client refresh converges on.
+ * the viewer back to sign-in; any other fetch failure surfaces an explicit
+ * `error` signal (rendered inline as a retryable alert) so operators can
+ * tell a broken queue from an empty one.
  */
 export async function loader({ request }: LoaderFunctionArgs): Promise<ReviewLoaderData> {
-  const empty: ReviewLoaderData = { pending: [], decided: [], labels: QUEUE_ACTION_LABELS };
+  const empty: ReviewLoaderData = {
+    pending: [],
+    decided: [],
+    labels: QUEUE_ACTION_LABELS,
+    error: null,
+  };
   try {
     const url = new URL("/_agent-native/actions/list-effects", request.url);
     const headers: Record<string, string> = {};
@@ -75,26 +82,36 @@ export async function loader({ request }: LoaderFunctionArgs): Promise<ReviewLoa
       throw redirect("/");
     }
     if (!response.ok) {
-      return empty;
+      return {
+        ...empty,
+        error: `Couldn't load the review queue (status ${response.status}).`,
+      };
     }
     const data: unknown = await response.json();
-    const rows = Array.isArray(data) ? data : [];
+    if (!Array.isArray(data)) {
+      return { ...empty, error: "Couldn't load the review queue." };
+    }
+    const rows = data;
     const effects = rows.filter(isQueueEffect);
     return {
       pending: effects.filter((row) => row.status === "pending_review"),
       decided: effects.filter((row) => row.status !== "pending_review"),
       labels: QUEUE_ACTION_LABELS,
+      error: null,
     };
   } catch (error) {
     if (error instanceof Response) {
       throw error;
     }
-    return empty;
+    return {
+      ...empty,
+      error: "Couldn't load the review queue.",
+    };
   }
 }
 
 export default function ReviewRoute() {
-  const { pending, decided, labels } = useLoaderData<typeof loader>();
+  const { pending, decided, labels, error } = useLoaderData<typeof loader>();
   const revalidator = useRevalidator();
   const [selected, setSelected] = useState<string[]>([]);
   const [batchBusy, setBatchBusy] = useState(false);
@@ -164,6 +181,16 @@ export default function ReviewRoute() {
           </Button>
         </div>
       ) : null}
+      {error ? (
+        <div className="flex items-center gap-3">
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+          <Button type="button" size="sm" onClick={() => refresh()}>
+            Retry
+          </Button>
+        </div>
+      ) : null}
       {batchError ? (
         <p role="alert" className="text-sm text-destructive">
           {batchError}
@@ -171,7 +198,7 @@ export default function ReviewRoute() {
       ) : null}
 
       <section aria-label="Pending review" className="flex flex-col gap-4">
-        {pending.length === 0 ? (
+        {pending.length === 0 && !error ? (
           <Card>
             <CardContent className="pt-4">
               <p className="text-sm text-muted-foreground">No effects waiting for review.</p>
