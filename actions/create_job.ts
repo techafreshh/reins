@@ -20,7 +20,8 @@ export default defineAction({
     nextRequiredAction: z.string(),
   }),
   errors: jobErrors,
-  changeResource: (_input, result) => ({ resourceType: "job", resourceId: result.id }),
+  changeResource: (_input, result) =>
+    result ? { resourceType: "job", resourceId: result.id } : undefined,
   run: async ({ template, title }) => {
     const db = getDb();
     const id = `job_${randomUUID()}`;

@@ -169,6 +169,12 @@ describe("assign_task and get_job_feed", () => {
         { id: "job_4", message: "m", state: "planning", nextRequiredAction: "advance_job" },
       ),
     ).toEqual({ resourceType: "job", resourceId: "job_4" });
+    expect(
+      createJob.changeResource?.(
+        { template: "chase-up", title: "t" },
+        undefined as never,
+      ),
+    ).toBeUndefined();
   });
 
   it("returns 404 for unknown job ids", async () => {
