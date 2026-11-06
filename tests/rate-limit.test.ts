@@ -45,6 +45,7 @@ describe("agent turn cap", () => {
 
   it("matches only POSTs to the agent-chat runtime", () => {
     expect(isAgentTurnRequest("POST", "/_agent-native/agent-chat")).toBe(true);
+    expect(isAgentTurnRequest("POST", "/_agent-native/agent-chat/")).toBe(true);
     expect(isAgentTurnRequest("POST", "/_agent-native/agent-chat/threads/abc")).toBe(true);
     expect(isAgentTurnRequest("GET", "/_agent-native/agent-chat")).toBe(false);
     expect(isAgentTurnRequest("POST", "/api/health")).toBe(false);

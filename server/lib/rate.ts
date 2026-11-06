@@ -66,7 +66,8 @@ export function isAgentTurnRequest(method: string | undefined, pathname: string)
   if (method !== "POST") {
     return false;
   }
-  return pathname === AGENT_CHAT_PATH || pathname.startsWith(`${AGENT_CHAT_PATH}/threads`);
+  const normalized = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  return normalized === AGENT_CHAT_PATH || normalized.startsWith(`${AGENT_CHAT_PATH}/threads`);
 }
 
 /**
