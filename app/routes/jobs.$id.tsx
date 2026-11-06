@@ -6,16 +6,30 @@ import {
 } from "@agent-native/core/client/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { useLoaderData, useParams } from "react-router";
+import { useLoaderData, useParams, type LoaderFunctionArgs } from "react-router";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import SteerBar, { STEER_PLACEHOLDER, STEER_SUGGESTIONS } from "@/components/jobs/SteerBar";
 
 export function meta() {
   return [{ title: "Live feed" }];
+}
+
+interface SsrAuditRow {
+  kind: string;
+  payload: string;
+  createdAt: string;
+}
+
+interface SsrJobState {
+  id: string;
+  title: string;
+  state: string;
+  audit: SsrAuditRow[];
 }
 
 /**
@@ -24,9 +38,94 @@ export function meta() {
  * serializes loader data into the SSR HTML stream — so a plain `GET`
  * of this page contains the exact `Live feed`, `Drafter`, and `Tracker`
  * strings even before client hydration.
+ *
+ * The loader also best-effort fetches the job's state (including its
+ * `steer` audit rows) over same-origin HTTP, so a plain `GET` of a steered
+ * job already contains the steering instruction text and its
+ * `Steering acknowledged — plan recalibrated` confirmation without JS.
+ * Failures degrade to `initial: null`; the client queries below converge
+ * on the same data within one poll interval.
  */
-export function loader() {
-  return { heading: "Live feed", agents: ["Drafter", "Tracker"] as const };
+export async function loader({ params, request }: LoaderFunctionArgs) {
+  const jobId = params.id ?? "";
+  let initial: SsrJobState | null = null;
+  if (jobId) {
+    try {
+      const url = new URL(
+        `/_agent-native/actions/get_job_state?id=${encodeURIComponent(jobId)}`,
+        request.url,
+      );
+      const headers: Record<string, string> = {};
+      const cookie = request.headers.get("cookie");
+      if (cookie) {
+        headers.cookie = cookie;
+      }
+      const authorization = request.headers.get("authorization");
+      if (authorization) {
+        headers.authorization = authorization;
+      }
+      const response = await fetch(url, {
+        headers,
+        signal: AbortSignal.timeout(3000),
+      });
+      if (response.ok) {
+        const data = (await response.json()) as Partial<SsrJobState> | null;
+        if (data && typeof data.id === "string" && Array.isArray(data.audit)) {
+          initial = {
+            id: data.id,
+            title: typeof data.title === "string" ? data.title : "",
+            state: typeof data.state === "string" ? data.state : "",
+            audit: (data.audit as SsrAuditRow[]).filter(
+              (row) => row && typeof row.kind === "string" && typeof row.payload === "string",
+            ),
+          };
+        }
+      }
+    } catch {
+      initial = null;
+    }
+  }
+  // The steering panel copy is single-sourced here (the same values the
+  // SteerBar renders) so the SSR HTML stream carries the exact panel
+  // strings and confirmations without JS — mirroring how `heading` and
+  // `agents` already serve the #6 feed contract.
+  return {
+    heading: "Live feed",
+    agents: ["Drafter", "Tracker"] as const,
+    jobId,
+    initial,
+    steerPanel: {
+      placeholder: STEER_PLACEHOLDER,
+      suggestions: [...STEER_SUGGESTIONS],
+      confirmation: STEER_CONFIRMATION,
+      confirmations: steeringConfirmations(initial?.audit),
+    },
+  };
+}
+
+/** The confirmation line shown under the live feed for each steering. */
+const STEER_CONFIRMATION = "Steering acknowledged — plan recalibrated";
+
+/** Extract steering confirmations from `steer` audit rows, oldest first. */
+function steeringConfirmations(audit: SsrAuditRow[] | undefined): string[] {
+  if (!audit) {
+    return [];
+  }
+  const out: string[] = [];
+  for (const row of audit) {
+    if (row.kind !== "steer") {
+      continue;
+    }
+    try {
+      const payload = JSON.parse(row.payload) as { instruction?: unknown };
+      if (typeof payload.instruction === "string" && payload.instruction.length > 0) {
+        out.push(payload.instruction);
+      }
+    } catch {
+      // Malformed payloads never break the feed.
+    }
+  }
+  return out;
 }
 
 interface FeedCard {
@@ -89,7 +188,7 @@ export default function JobFeedRoute() {
     },
   });
 
-  const stateQuery = useActionQuery("get_job_state", { id: jobId }, { enabled: Boolean(jobId) });
+  const stateQuery = useActionQuery("get_job_state", { id: jobId }, { enabled: Boolean(jobId), refetchInterval: 5000 });
   const feedQuery = useActionQuery(
     "get_job_feed",
     { id: jobId },
@@ -106,6 +205,7 @@ export default function JobFeedRoute() {
     title: string;
     state: string;
     message: string;
+    audit?: SsrAuditRow[];
   } | null;
   const feed = (feedQuery.data ?? null) as {
     id: string;
@@ -118,6 +218,10 @@ export default function JobFeedRoute() {
 
   const log = feed?.log ?? [];
   const agents: AgentFeeds = feed?.agents ?? { drafter: [], tracker: [] };
+  // Live steering confirmations converge via the polling state query;
+  // the SSR loader data covers the first paint without JS.
+  const liveSteering = steeringConfirmations(state?.audit);
+  const steering = liveSteering.length > 0 || stateQuery.data ? liveSteering : display.steerPanel.confirmations;
 
   function submitAssign(event: React.FormEvent) {
     event.preventDefault();
@@ -143,13 +247,13 @@ export default function JobFeedRoute() {
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
       <header>
         <p className="text-sm text-muted-foreground">
-          {state?.title ?? feed?.title ?? (stateQuery.isLoading ? "Loading job…" : "Job")}
+          {state?.title ?? feed?.title ?? display.initial?.title ?? (stateQuery.isLoading ? "Loading job…" : "Job")}
         </p>
         <h1 className="text-2xl font-bold">{display.heading}</h1>
-        {state?.state ? (
-          <p className="mt-1 text-sm text-muted-foreground">State: {state.state}</p>
+        {state?.state ?? display.initial?.state ? (
+          <p className="mt-1 text-sm text-muted-foreground">State: {state?.state ?? display.initial?.state}</p>
         ) : null}
-        {stateQuery.isError ? (
+        {stateQuery.isError && !display.initial ? (
           <p className="mt-1 text-sm text-destructive">
             {actionErrorMessage(stateQuery.error) ?? "Couldn't load the job."}
           </p>
@@ -178,6 +282,16 @@ export default function JobFeedRoute() {
               ))}
             </ul>
           )}
+          {steering.length > 0 ? (
+            <ul className="mt-3 flex flex-col gap-2 border-t pt-3">
+              {steering.map((instruction, index) => (
+                <li key={`${index}-${instruction}`} className="text-sm">
+                  <span className="font-medium">{display.steerPanel.confirmation}: </span>
+                  {instruction}
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -185,6 +299,12 @@ export default function JobFeedRoute() {
         <AgentColumn title={display.agents[0]} cards={agents.drafter} emptyHint="No Drafter cards yet." />
         <AgentColumn title={display.agents[1]} cards={agents.tracker} emptyHint="No Tracker cards yet." />
       </div>
+
+      <SteerBar
+        jobId={display.jobId || jobId}
+        placeholder={display.steerPanel.placeholder}
+        suggestions={display.steerPanel.suggestions}
+      />
 
       <Card>
         <CardHeader>

@@ -130,6 +130,32 @@
   custom app-owned SSE endpoint, no manual `EventSource` clients.
 - Revisit real `agent-teams` spawns only if a later beat needs model output.
 
+## D7 — Mid-flight steering queues at the next tool boundary, never interrupts
+
+- Beat 3 needs `steer_job` from `running`: the persistence path (a
+  `role: "steering"` message row plus a `kind: "steer"` audit row) IS the
+  delivery queue from D1 — no separate control channel. `running` steers
+  skip `transitionJob` and stay `running` (the `running → running` pair is
+  illegal per the `TRANSITIONS` table); `awaiting_review` still bounces via
+  `transitionJob` to `running`. The wire param is `jobId` with legacy `id`
+  kept as an alias, normalized server-side.
+- Single delivery path: the SteerBar client calls only the `steer_job`
+  action; the action's `run` calls the `server/lib/chat-bridge.ts` pipe
+  best-effort after its DB writes, and `changeResource`
+  (`{ resourceType: "job", resourceId }`) drives SSE refresh. The client
+  never calls `sendToAgentChat` directly — that would double-deliver the
+  same instruction to the live thread.
+- Feed confirmation (`Steering acknowledged — plan recalibrated`) renders
+  from the `steer` audit row, not from a synthetic orchestrator message —
+  a second message row would pollute agent context and duplicate the
+  source of truth.
+- **Decision:** steering queues for the next tool boundary
+  (`deliverInActiveRun` semantics), never `interruptActiveRun`, because
+  abort-and-resubmit risks double-sending chase emails while steering is
+  plan recalibration, not cancellation. The bridge records the pipe
+  attempt (`kind: "steer_queued"`, queue mode) and never throws, so bridge
+  failure can never fail a steer.
+
 ## Net effect on the plan
 
 - Spike ledger: 5/5 lands on first-choice documented paths; the design doc's

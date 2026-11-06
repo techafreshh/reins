@@ -128,7 +128,7 @@ describe("job lifecycle actions", () => {
     const steered = await steerJob.run({ id: created.id, instruction: "Skip sensitive contacts." });
     expect(steered).toMatchObject({
       id: created.id,
-      message: "Steering recorded; job back to running",
+      message: "Steering acknowledged",
       state: "running",
       nextRequiredAction: "advance_job",
     });
