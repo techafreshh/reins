@@ -1,5 +1,5 @@
 import { defineAction } from "@agent-native/core/action";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { getDb } from "../server/db/index.js";
@@ -24,15 +24,19 @@ export default defineAction({
   http: { method: "GET" },
   run: async ({ state, limit }) => {
     const db = getDb();
-    const rows = await db.select().from(jobs).orderBy(desc(jobs.updatedAt));
-    return rows
-      .filter((row) => (state ? row.status === state : true))
-      .slice(0, limit)
-      .map((row) => ({
-        id: row.id,
-        title: row.title,
-        state: row.status as (typeof JOB_STATES)[number],
-        updatedAt: row.updatedAt,
-      }));
+    const rows = await (state
+      ? db
+          .select()
+          .from(jobs)
+          .where(eq(jobs.status, state))
+          .orderBy(desc(jobs.updatedAt))
+          .limit(limit)
+      : db.select().from(jobs).orderBy(desc(jobs.updatedAt)).limit(limit));
+    return rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      state: row.status as (typeof JOB_STATES)[number],
+      updatedAt: row.updatedAt,
+    }));
   },
 });
