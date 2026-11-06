@@ -10,6 +10,8 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import createJob from "../actions/create-job.js";
+import decideEffect from "../actions/decide-effect.js";
+import executeEffect from "../actions/execute-approved-effect.js";
 import getPolicy from "../actions/get-policy.js";
 import proposeEffect from "../actions/propose-effect.js";
 import updatePolicy from "../actions/update-policy.js";
@@ -290,5 +292,38 @@ describe("kill-switch propose gate", () => {
       payload: { threadId: "th_1", to: "priya@example.com", subject: "Hi", body: "nudge" },
     });
     expect(resumed.status).toBe("pending_review");
+  });
+
+  it("returns the same policy_blocked 409 for propose and execute while killed", async () => {
+    await updatePolicy.run({ capability: "send_followup", level: "ASK" });
+    await updatePolicy.run({ killSwitch: false });
+    const created = await createJob.run({ template: "chase-up", title: "Kill unified" });
+    const proposed = await proposeEffect.run({
+      jobId: created.id,
+      capability: "send_followup",
+      payload: { threadId: "th_1", to: "priya@example.com", subject: "Hi", body: "nudge" },
+    });
+    await decideEffect.run({ effectId: proposed.id, decision: "approve" });
+
+    await updatePolicy.run({ killSwitch: true });
+
+    const proposeBlocked = await proposeEffect
+      .run({
+        jobId: created.id,
+        capability: "send_followup",
+        payload: { threadId: "th_1", to: "priya@example.com", subject: "Hi", body: "nudge" },
+      })
+      .catch((e) => e);
+    const executeBlocked = await executeEffect.run({ effectId: proposed.id }).catch((e) => e);
+    expect(contractError(proposeBlocked)).toEqual({
+      errorCode: "policy_blocked",
+      statusCode: 409,
+    });
+    expect(contractError(executeBlocked)).toEqual({
+      errorCode: "policy_blocked",
+      statusCode: 409,
+    });
+
+    await updatePolicy.run({ killSwitch: false });
   });
 });
