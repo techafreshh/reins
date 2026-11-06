@@ -65,3 +65,75 @@ Probe surfaces:
 
 No external services are required (`docker-compose.yml` is an intentionally
 empty-services stub; local state is file-backed PGlite).
+
+## Demo account
+
+A shared demo account is available on the deployed VPS:
+
+- Email: `demo@reins.example`
+- Password: `reins-demo-chase`
+
+The owner creates this demo account once via the app sign-up page after the
+first deploy (Better Auth users are never seeded from scripts or migrations).
+Sign in with it to walk the seeded world: the chase-up job, its Drafter and
+Tracker cards, and the review queue.
+
+## Real vs not yet
+
+Real today:
+
+- Jobs lifecycle (planning → running → awaiting_review → complete) with a
+  seeded demo world (`pnpm seed:demo`).
+- Mid-flight steering from `running` without interrupting the run.
+- Human review queue (approve / edit-approve / reject with feedback).
+- Trust dial (per-capability levels plus global kill switch) with audit.
+- Simulated execution receipts for approved effects.
+
+Not yet:
+
+- Real email sending or receiving.
+- Multi-tenant auth / orgs.
+- A2A federation.
+
+Simulated outbox — nothing leaves this machine.
+
+## Deploy checklist (VPS)
+
+Required env vars (see `.env.example`):
+
+- `DATABASE_URL` — Postgres connection string (compose sets this for `app`).
+- `BETTER_AUTH_SECRET` — stable random secret; compose requires it
+  (`${BETTER_AUTH_SECRET:?required}`).
+- `ANTHROPIC_API_KEY` — funds the VPS agent turns behind the per-hour
+  turn cap (20 turns/hour/source; the 21st gets 429).
+- `PORT=3000` — the port compose publishes.
+
+Before first boot, against the compose Postgres:
+
+```bash
+pnpm migrate:production
+pnpm seed:demo
+```
+
+Then `docker compose up -d --build`.
+
+Reverse-proxy SSE note: the live job feed streams over
+`/_agent-native/events`. Disable buffering for that path or live streams
+degrade to polling. For nginx:
+
+```nginx
+location /_agent-native/events {
+  proxy_buffering off;
+  proxy_set_header X-Accel-Buffering no;
+  proxy_pass http://app:3000;
+}
+```
+
+TLS terminates at the owner's reverse proxy.
+
+## Clips demo (≤2:30)
+
+Record a walkthrough of at most 2 minutes 30 seconds: sign in with the demo
+account, run the chase-up job, steer it mid-flight, approve one effect in the
+review queue. Honesty line, spoken on camera: "nothing leaves this machine —
+every send is simulated until a human approves it."

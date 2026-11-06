@@ -1,5 +1,36 @@
-# Reins walking skeleton: no external services required.
-# Local dev uses file-backed PGlite; the toolchain is Node 22 + pnpm via corepack.
+# Reins production deploy: app + postgres.
+# First boot: set BETTER_AUTH_SECRET, then `pnpm migrate:production`.
 name: reins
 
-services: {}
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://reins:reins@postgres:5432/reins
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?required}
+      NODE_ENV: production
+      PORT: "3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: reins
+      POSTGRES_PASSWORD: reins
+      POSTGRES_DB: reins
+    volumes:
+      - reins-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reins -d reins"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  reins-pgdata:
