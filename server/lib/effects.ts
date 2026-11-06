@@ -45,6 +45,10 @@ export function normalizeDecision(input: string): CanonicalDecision | null {
   return DECISION_ALIASES[input] ?? null;
 }
 
+/** Static outbox chip: demo mode never leaves this machine. Single-sourced
+ * here so the execute gate message and the Review Queue SSR chip cannot drift. */
+export const SIMULATED_OUTBOX_NOTE = "Simulated outbox — nothing leaves this machine";
+
 /** New effect ids carry an `eff_` prefix so probes can assert the shape. */
 export function newEffectId(): string {
   return `eff_${globalThis.crypto.randomUUID()}`;
