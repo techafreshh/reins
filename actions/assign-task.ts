@@ -14,7 +14,7 @@ export default defineAction({
   schema: z.object({
     jobId: z.string().min(1).describe("Job id, e.g. job_..."),
     agent: z.enum(["drafter", "tracker"]).describe("Agent thread to append the card to"),
-    task: z.string().min(1).describe("Follow-up task for the agent"),
+    task: z.string().trim().min(1).describe("Follow-up task for the agent"),
   }),
   outputSchema: z.object({
     id: z.string(),
