@@ -1,3 +1,4 @@
+// guard:allow-resource-action-access — jobs are single-tenant with no per-job visibility; changeResource only scopes realtime fan-out, not authorization; revisit when per-job visibility is hardened.
 import { defineAction } from "@agent-native/core/action";
 import { asc, eq } from "drizzle-orm";
 import { z } from "zod";

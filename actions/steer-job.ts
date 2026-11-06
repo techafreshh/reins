@@ -1,3 +1,4 @@
+// guard:allow-resource-action-access — jobs are single-tenant with no per-job visibility; changeResource only scopes realtime fan-out, not authorization; revisit when per-job visibility is hardened.
 import { randomUUID } from "node:crypto";
 
 import { defineAction } from "@agent-native/core/action";
