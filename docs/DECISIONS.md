@@ -200,3 +200,31 @@
   writeback, no restarts, and no cross-action coupling; every mutation
   (`learning_proposed`, `learning_approved`/`learning_rejected`,
   `learning_applied`) leaves an `audit_events` row.
+
+## D10 — Ship slice: public GET catalog, kebab alias, auth-gate turn cap, host-side demo account (issue #14)
+
+- `GET /mcp` is an app-owned static JSON catalog (`server/routes/mcp.get.ts`,
+  exempted via `publicPaths` in `server/plugins/auth.ts`) covering the 14
+  agent-tool actions — not `mcp.connectorCatalog` in `agent-chat.ts`, which
+  only shapes the authenticated POST surface the probe never exercises.
+  Correction found during verification: the framework mounts its
+  authenticated handshake with `app.use("/mcp", ...)` prefix middleware,
+  which runs before Nitro's scanned routes — the route file alone 401s
+  (proven empirically against a prod build). So
+  `server/plugins/mcp-catalog.ts` mounts the same handler ahead of the
+  framework mount: exact-path GETs get the catalog, everything else falls
+  through (`undefined`) to the untouched POST handshake.
+- CLI kebab-case is a one-line alias module (`actions/create-job.ts`
+  re-exporting `create_job`): the framework resolves CLI/HTTP names by
+  filename, so both spellings share one definition. `create_job.title`
+  defaults to `"Chase-up sweep"` so `--template`-only invocations validate.
+- The turn cap (20/hour/source, 21st → 429 `rate_limited`) is enforced
+  HTTP-only in `server/middleware/auth.ts` for POSTs to the agent-chat
+  runtime, backed by the pure sliding-window limiter in `server/lib/rate.ts`
+  — enforcing inside actions would trip `pnpm test`, which invokes `run()`
+  dozens of times per process. In-memory `Map` suffices for the single
+  Node prod process; no shared store.
+- The demo account is a host-side sign-up step after first deploy, never a
+  DB-seeded row — Better Auth internals are not scripted. Compose ships
+  `app` + `postgres:16-alpine`; TLS/DNS stay at the owner's reverse proxy,
+  which must disable buffering for `/_agent-native/events`.
