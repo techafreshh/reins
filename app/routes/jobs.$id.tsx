@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import SteerBar, { STEER_PLACEHOLDER, STEER_SUGGESTIONS } from "@/components/jobs/SteerBar";
+import JobDigest, { type JobDigestData } from "@/components/jobs/JobDigest";
 
 export function meta() {
   return [{ title: "Live feed" }];
@@ -49,6 +50,7 @@ interface SsrJobState {
 export async function loader({ params, request }: LoaderFunctionArgs) {
   const jobId = params.id ?? "";
   let initial: SsrJobState | null = null;
+  let digest: JobDigestData | null = null;
   if (jobId) {
     try {
       const url = new URL(
@@ -84,6 +86,40 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
     } catch {
       initial = null;
     }
+    // Read-only end-of-job roundup: the digest never writes, so it is safe
+    // to fetch on every paint from any state. Failures degrade to null
+    // and the agent columns below still render.
+    try {
+      const url = new URL("/_agent-native/actions/digest_completed_job", request.url);
+      const headers: Record<string, string> = { "content-type": "application/json" };
+      const cookie = request.headers.get("cookie");
+      if (cookie) {
+        headers.cookie = cookie;
+      }
+      const authorization = request.headers.get("authorization");
+      if (authorization) {
+        headers.authorization = authorization;
+      }
+      const response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ jobId }),
+        signal: AbortSignal.timeout(3000),
+      });
+      if (response.ok) {
+        const data = (await response.json()) as Partial<JobDigestData> | null;
+        if (
+          data &&
+          typeof data.message === "string" &&
+          typeof data.approved === "number" &&
+          typeof data.rejected === "number"
+        ) {
+          digest = data as JobDigestData;
+        }
+      }
+    } catch {
+      digest = null;
+    }
   }
   // The steering panel copy is single-sourced here (the same values the
   // SteerBar renders) so the SSR HTML stream carries the exact panel
@@ -94,6 +130,7 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
     agents: ["Drafter", "Tracker"] as const,
     jobId,
     initial,
+    digest,
     steerPanel: {
       placeholder: STEER_PLACEHOLDER,
       suggestions: [...STEER_SUGGESTIONS],
@@ -294,6 +331,8 @@ export default function JobFeedRoute() {
           ) : null}
         </CardContent>
       </Card>
+
+      <JobDigest digest={display.digest} />
 
       <div className="grid gap-6 md:grid-cols-2">
         <AgentColumn title={display.agents[0]} cards={agents.drafter} emptyHint="No Drafter cards yet." />
