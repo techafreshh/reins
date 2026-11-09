@@ -10,6 +10,9 @@ services:
     environment:
       DATABASE_URL: postgresql://reins:reins@postgres:5432/reins
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?required}
+      # Funds agent turns on the deployed instance; guarded by the per-hour
+      # turn cap signed in with the demo account. Never bake into the image.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       NODE_ENV: production
       PORT: "3000"
     depends_on:

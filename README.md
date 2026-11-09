@@ -1,36 +1,39 @@
 # Reins
 
-The minimal agent-native starter app — a clean, ChatGPT-style shell with chat at
-the center, durable threads, standard app navigation, auth, live sync, and
-actions. Start here when you want a real browser app to build on without
-committing to a domain template.
+**Run agents, hold the reins.** Reins delegates stakeholder chase-up work to
+an agent under an auditable contract: two sub-agents (Drafter, Tracker) work
+quiet email threads in the open, every outward effect stops at an editable
+review card that only a human decision can execute, trust is a per-capability
+dial enforced server-side, mid-flight steering redirects a running job, and
+every rejected correction permanently upgrades the agent. Every effect,
+decision, and policy change lands in an append-only audit trail.
 
-**Live app: [chat.agent-native.com](https://chat.agent-native.com?utm_source=github&utm_medium=referral&utm_content=chat-readme)**
+Built on [Agent-Native](https://github.com/BuilderIO/agent-native) for the
+Builder.io Agent-Native hackathon (November 2026). One workload — chase-up
+coordination — done end to end. Email is simulated by design (demo seed data;
+**nothing leaves this machine**; real connectors are post-hackathon).
 
-Reins is the basic agent-native app starting point. It gives you the app-agent
-loop wired end to end and one example action, so you can add your own UI, data,
-and actions on top.
+**Live app:** `https://reins.techa.pro` — sign in with the demo account below
+to see the seeded world.
 
-## Features
+## The three beats
 
-- ChatGPT-style shell with a threads list and durable chat history.
-- Auth, live sync, and application state wired out of the box.
-- The action surface the agent and UI share, plus one example action to copy.
-- A minimal, brandable base for any domain app.
+1. **Watch it work** — launch a chase-up job from the jobs board; the live
+   feed streams the Orchestrator's plan plus Drafter and Tracker threads as
+   chips over SSE as they happen.
+2. **Steer it** — the SteerBar pipes into the *running* job's thread at the
+   next tool boundary ("skip anyone over 60 days stale; don't email Alex
+   before Thursday"); the plan visibly recalibrates. Tighten the trust dial
+   live — the next auto-action that would have run now requires approval.
+3. **It learns** — reject a draft **with feedback**; the agent proposes a rule
+   as a diff card; approving it writes to the agent's Postgres-resident
+   learnings, and the *very next draft* reflects the rule (reloaded every
+   turn, same process).
 
-## Develop locally
+The same ~13 `defineAction` capabilities power the UI, the agent's tools, the
+HTTP API, the CLI (`pnpm action create-job --template=chase-up`), and MCP
+(`/mcp` — your running jobs are steerable from any MCP client).
 
-Scaffold your own copy and run it:
-
-```bash
-npx --yes @agent-native/core@latest create my-app --standalone --template chat
-cd my-app
-corepack enable
-pnpm install
-pnpm dev
-```
-
-Full docs: [agent-native.com/docs/template-chat](https://agent-native.com/docs/template-chat?utm_source=github&utm_medium=referral&utm_content=chat-readme).
 
 ## CI verification gate
 
