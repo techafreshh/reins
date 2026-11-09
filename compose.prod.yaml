@@ -1,0 +1,15 @@
+# VPS production override: fronts the app with the shared Caddy gateway.
+# No host ports are published; Caddy reaches `reins:3000` over web_gateway.
+# (Compose v5 merges `ports:` sequences, so the base list is reset with !override.)
+services:
+  app:
+    container_name: reins-app
+    ports: !override []
+    networks:
+      default: {}
+      web_gateway:
+        aliases: ["reins"]
+
+networks:
+  web_gateway:
+    external: true

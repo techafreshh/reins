@@ -107,22 +107,49 @@ Required env vars (see `.env.example`):
 - `DATABASE_URL` — Postgres connection string (compose sets this for `app`).
 - `BETTER_AUTH_SECRET` — stable random secret; compose requires it
   (`${BETTER_AUTH_SECRET:?required}`).
-- `ANTHROPIC_API_KEY` — funds the VPS agent turns behind the per-hour
-  turn cap (20 turns/hour/source; the 21st gets 429).
-- `PORT=3000` — the port compose publishes.
+- `ANTHROPIC_API_KEY` or `OPENROUTER_API_KEY` — funds the VPS agent turns
+  behind the per-hour turn cap (20 turns/hour/source; the 21st gets 429).
+  The runtime uses the first provider key it finds (anthropic, openai,
+  openrouter, google, groq, mistral, cohere).
+- `PORT=3000` — the port the app serves on.
 
-Before first boot, against the compose Postgres:
+Deploy app + postgres (the prod override joins the shared Caddy gateway
+network as alias `reins`; no host ports are published):
 
 ```bash
-pnpm migrate:production
-pnpm seed:demo
+docker compose -f docker-compose.yml -f compose.prod.yaml up -d --build
 ```
 
-Then `docker compose up -d --build`.
+Schema migrations apply automatically at app boot. Before the first visit,
+create the seeded demo world against the compose Postgres (first bring up
+postgres, or run this after `--build` when postgres is healthy):
+
+```bash
+docker compose -f docker-compose.yml -f compose.prod.yaml up -d postgres
+docker run --rm --network reins_default -v "$PWD":/src -w /src \
+  -e DATABASE_URL=postgresql://reins:reins@postgres:5432/reins \
+  node:24-slim sh -c "corepack enable && pnpm install --frozen-lockfile && pnpm seed:demo"
+```
+
+`pnpm migrate:production` / `pnpm seed:demo` also work from a checkout with
+dependencies installed — point `DATABASE_URL` at the compose Postgres.
+
+Then create the demo account once via the app sign-up page (Better Auth
+users are never seeded from scripts or migrations).
 
 Reverse-proxy SSE note: the live job feed streams over
 `/_agent-native/events`. Disable buffering for that path or live streams
-degrade to polling. For nginx:
+degrade to polling. For Caddy:
+
+```caddy
+reins.techa.pro {
+    reverse_proxy reins:3000 {
+        flush_interval -1
+    }
+}
+```
+
+For nginx:
 
 ```nginx
 location /_agent-native/events {

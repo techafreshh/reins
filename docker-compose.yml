@@ -1,18 +1,25 @@
 # Reins production deploy: app + postgres.
+# Portable base: no host ports. The VPS production override
+# (compose.prod.yaml) joins the shared Caddy gateway network.
 # First boot: set BETTER_AUTH_SECRET, then `pnpm migrate:production`.
+# Deploy: docker compose -f docker-compose.yml -f compose.prod.yaml up -d --build
 name: reins
 
 services:
   app:
     build: .
-    ports:
-      - "3000:3000"
+    # Documentation only; edge routing happens via web_gateway (no publish).
+    expose:
+      - "3000"
     environment:
       DATABASE_URL: postgresql://reins:reins@postgres:5432/reins
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?required}
       # Funds agent turns on the deployed instance; guarded by the per-hour
       # turn cap signed in with the demo account. Never bake into the image.
+      # Either key works: the framework's default engine is the first with a
+      # key set (anthropic, openai, openrouter, google, groq, mistral, cohere).
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       NODE_ENV: production
       PORT: "3000"
     depends_on:
