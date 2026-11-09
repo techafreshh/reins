@@ -64,7 +64,8 @@ Dev server: `http://localhost:8080/` (default `agent-native dev` port).
 Probe surfaces:
 
 - `GET /api/health` → `200` with exactly `{"status":"ok","skeleton":true}`.
-- `GET /` → `200` HTML placeholder containing `Reins skeleton live` (skeleton v0.1.0) with links to `/home` and `/chat`.
+- `GET /` → `302` to `/home` (the Get started page); signed-out visitors
+  continue through the workspace guard to the shared sign-in.
 
 No external services are required for local dev (`docker-compose.yml` defines the
 production VPS deploy: app + postgres; local state is file-backed PGlite).

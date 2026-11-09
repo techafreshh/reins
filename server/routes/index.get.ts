@@ -1,27 +1,9 @@
-import { defineEventHandler, setResponseHeader } from "h3";
+import { defineEventHandler, sendRedirect } from "h3";
 
-const SKELETON_VERSION = "0.1.0";
-
-const PLACEHOLDER_HTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Reins skeleton</title>
-</head>
-<body>
-<main>
-<h1>Reins skeleton live</h1>
-<p>Placeholder jobs page. skeleton v${SKELETON_VERSION}</p>
-<nav><a href="/home">Home</a> <a href="/chat">Chat</a></nav>
-</main>
-</body>
-</html>
-`;
-
-// The framework SSR shell never renders route markup (impersonal cached
-// skeleton), so the probe-visible placeholder is served statically here.
+// "/" is not an app surface: signed-in visitors land on the Get started
+// page, and signed-out visitors continue through the workspace guard to
+// the shared sign-in. The framework SSR shell cannot match the bare root
+// (the catch-all handler requires a splat), so this explicit route owns it.
 export default defineEventHandler((event) => {
-  setResponseHeader(event, "content-type", "text/html; charset=utf-8");
-  return PLACEHOLDER_HTML;
+  return sendRedirect(event, "/home", 302);
 });
