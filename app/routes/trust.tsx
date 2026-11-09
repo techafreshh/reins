@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { redirect, useLoaderData, useRevalidator, type LoaderFunctionArgs } from "react-router";
+import { useLoaderData, useRevalidator } from "react-router";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import getPolicy from "../../actions/get-policy.js";
 
 /**
  * Trust level and capability vocabularies. Mirrors `server/lib/policy.ts`
@@ -48,48 +49,23 @@ function normalizeLevels(value: unknown): TrustLoaderData["levels"] {
 }
 
 /**
- * SSR-first policy read: the loader fetches `get-policy` same-origin
- * (forwarding the viewer's credentials) so the first paint already carries
- * the live levels. Auth failures redirect to sign-in; any other failure
+ * SSR-first policy read through the get-policy action itself (the same read
+ * the HTTP surface serves): loaders in this framework build never see
+ * request cookies, so a same-origin HTTP self-fetch always 401'd in
+ * production and bounced signed-in viewers to the placeholder. Auth stays
+ * enforced upstream — the framework workspace guard redirects signed-out
+ * document loads to sign-in before this loader runs. Any other failure
  * degrades to ASK-everything with the kill switch off.
  */
-export async function loader({ request }: LoaderFunctionArgs): Promise<TrustLoaderData> {
-  const fallback = fallbackData();
+export async function loader(): Promise<TrustLoaderData> {
   try {
-    const url = new URL("/_agent-native/actions/get-policy", request.url);
-    const headers: Record<string, string> = {};
-    const cookie = request.headers.get("cookie");
-    if (cookie) {
-      headers.cookie = cookie;
-    }
-    const authorization = request.headers.get("authorization");
-    if (authorization) {
-      headers.authorization = authorization;
-    }
-    const response = await fetch(url, {
-      headers,
-      signal: AbortSignal.timeout(3000),
-    });
-    if (response.status === 401) {
-      throw redirect("/");
-    }
-    if (!response.ok) {
-      return fallback;
-    }
-    const data: unknown = await response.json();
-    if (!data || typeof data !== "object") {
-      return fallback;
-    }
-    const row = data as { killSwitch?: unknown; levels?: unknown };
+    const policy = await getPolicy.run({});
     return {
-      killSwitch: row.killSwitch === true,
-      levels: normalizeLevels(row.levels),
+      killSwitch: policy.killSwitch === true,
+      levels: normalizeLevels(policy.levels),
     };
-  } catch (error) {
-    if (error instanceof Response) {
-      throw error;
-    }
-    return fallback;
+  } catch {
+    return fallbackData();
   }
 }
 

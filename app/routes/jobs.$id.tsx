@@ -7,6 +7,8 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLoaderData, useParams, type LoaderFunctionArgs } from "react-router";
+import getJobState from "../../actions/get-job-state.js";
+import digestCompletedJob from "../../actions/digest-completed-job.js";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -40,49 +42,30 @@ interface SsrJobState {
  * of this page contains the exact `Live feed`, `Drafter`, and `Tracker`
  * strings even before client hydration.
  *
- * The loader also best-effort fetches the job's state (including its
- * `steer` audit rows) over same-origin HTTP, so a plain `GET` of a steered
+ * The loader also best-effort reads the job's state (including its
+ * `steer` audit rows) directly through the get-job-state action — loaders
+ * never see request cookies in this framework build, so a same-origin
+ * self-fetch always 401'd in production — so a plain `GET` of a steered
  * job already contains the steering instruction text and its
  * `Steering acknowledged — plan recalibrated` confirmation without JS.
  * Failures degrade to `initial: null`; the client queries below converge
  * on the same data within one poll interval.
  */
-export async function loader({ params, request }: LoaderFunctionArgs) {
+export async function loader({ params }: LoaderFunctionArgs) {
   const jobId = params.id ?? "";
   let initial: SsrJobState | null = null;
   let digest: JobDigestData | null = null;
   if (jobId) {
     try {
-      const url = new URL(
-        `/_agent-native/actions/get-job-state?id=${encodeURIComponent(jobId)}`,
-        request.url,
-      );
-      const headers: Record<string, string> = {};
-      const cookie = request.headers.get("cookie");
-      if (cookie) {
-        headers.cookie = cookie;
-      }
-      const authorization = request.headers.get("authorization");
-      if (authorization) {
-        headers.authorization = authorization;
-      }
-      const response = await fetch(url, {
-        headers,
-        signal: AbortSignal.timeout(3000),
-      });
-      if (response.ok) {
-        const data = (await response.json()) as Partial<SsrJobState> | null;
-        if (data && typeof data.id === "string" && Array.isArray(data.audit)) {
-          initial = {
-            id: data.id,
-            title: typeof data.title === "string" ? data.title : "",
-            state: typeof data.state === "string" ? data.state : "",
-            audit: (data.audit as SsrAuditRow[]).filter(
-              (row) => row && typeof row.kind === "string" && typeof row.payload === "string",
-            ),
-          };
-        }
-      }
+      const data = await getJobState.run({ id: jobId });
+      initial = {
+        id: data.id,
+        title: typeof data.title === "string" ? data.title : "",
+        state: typeof data.state === "string" ? data.state : "",
+        audit: data.audit.filter(
+          (row) => row && typeof row.kind === "string" && typeof row.payload === "string",
+        ),
+      };
     } catch {
       initial = null;
     }
@@ -90,33 +73,7 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
     // to fetch on every paint from any state. Failures degrade to null
     // and the agent columns below still render.
     try {
-      const url = new URL("/_agent-native/actions/digest-completed-job", request.url);
-      const headers: Record<string, string> = { "content-type": "application/json" };
-      const cookie = request.headers.get("cookie");
-      if (cookie) {
-        headers.cookie = cookie;
-      }
-      const authorization = request.headers.get("authorization");
-      if (authorization) {
-        headers.authorization = authorization;
-      }
-      const response = await fetch(url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ jobId }),
-        signal: AbortSignal.timeout(3000),
-      });
-      if (response.ok) {
-        const data = (await response.json()) as Partial<JobDigestData> | null;
-        if (
-          data &&
-          typeof data.message === "string" &&
-          typeof data.approved === "number" &&
-          typeof data.rejected === "number"
-        ) {
-          digest = data as JobDigestData;
-        }
-      }
+      digest = await digestCompletedJob.run({ jobId });
     } catch {
       digest = null;
     }

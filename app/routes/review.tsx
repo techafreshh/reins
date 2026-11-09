@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { redirect, useLoaderData, useRevalidator, type LoaderFunctionArgs } from "react-router";
+import { useLoaderData, useRevalidator } from "react-router";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import QueueCard, { type QueueActionLabels, type QueueEffect } from "@/components/review/QueueCard";
 import { SIMULATED_OUTBOX_NOTE } from "../../server/lib/effects.js";
+import listEffects from "../../actions/list-effects.js";
 
 export { SIMULATED_OUTBOX_NOTE };
 
@@ -49,14 +50,16 @@ function isQueueEffect(value: unknown): value is QueueEffect {
 }
 
 /**
- * SSR-first queue read: the loader fetches the whole queue over same-origin
- * HTTP (forwarding the viewer's credentials) so the first paint already
- * contains every pending card plus decided status text. Auth failures send
- * the viewer back to sign-in; any other fetch failure surfaces an explicit
- * `error` signal (rendered inline as a retryable alert) so operators can
- * tell a broken queue from an empty one.
+ * SSR-first queue read through the list-effects action itself (the same
+ * query the HTTP surface serves): loaders in this framework build never see
+ * request cookies, so a same-origin HTTP self-fetch always 401'd in
+ * production and bounced signed-in viewers to the placeholder. Auth stays
+ * enforced upstream — the framework workspace guard redirects signed-out
+ * document loads to sign-in before this loader runs. Any failure still
+ * surfaces an explicit `error` signal (rendered inline as a retryable
+ * alert) so operators can tell a broken queue from an empty one.
  */
-export async function loader({ request }: LoaderFunctionArgs): Promise<ReviewLoaderData> {
+export async function loader(): Promise<ReviewLoaderData> {
   const empty: ReviewLoaderData = {
     pending: [],
     decided: [],
@@ -64,34 +67,7 @@ export async function loader({ request }: LoaderFunctionArgs): Promise<ReviewLoa
     error: null,
   };
   try {
-    const url = new URL("/_agent-native/actions/list-effects", request.url);
-    const headers: Record<string, string> = {};
-    const cookie = request.headers.get("cookie");
-    if (cookie) {
-      headers.cookie = cookie;
-    }
-    const authorization = request.headers.get("authorization");
-    if (authorization) {
-      headers.authorization = authorization;
-    }
-    const response = await fetch(url, {
-      headers,
-      signal: AbortSignal.timeout(3000),
-    });
-    if (response.status === 401) {
-      throw redirect("/");
-    }
-    if (!response.ok) {
-      return {
-        ...empty,
-        error: `Couldn't load the review queue (status ${response.status}).`,
-      };
-    }
-    const data: unknown = await response.json();
-    if (!Array.isArray(data)) {
-      return { ...empty, error: "Couldn't load the review queue." };
-    }
-    const rows = data;
+    const rows = await listEffects.run({});
     const effects = rows.filter(isQueueEffect);
     return {
       pending: effects.filter((row) => row.status === "pending_review"),
@@ -99,10 +75,7 @@ export async function loader({ request }: LoaderFunctionArgs): Promise<ReviewLoa
       labels: QUEUE_ACTION_LABELS,
       error: null,
     };
-  } catch (error) {
-    if (error instanceof Response) {
-      throw error;
-    }
+  } catch {
     return {
       ...empty,
       error: "Couldn't load the review queue.",

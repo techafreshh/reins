@@ -1,6 +1,7 @@
-import { redirect, useLoaderData, type LoaderFunctionArgs } from "react-router";
+import { useLoaderData } from "react-router";
 
 import { Card, CardContent } from "@/components/ui/card";
+import listAudit from "../../actions/list-audit.js";
 
 export function meta() {
   return [{ title: "Audit" }];
@@ -43,47 +44,25 @@ function payloadExcerpt(payload: unknown): string {
 }
 
 /**
- * SSR-first audit read: the loader fetches the global audit log over
- * same-origin HTTP (forwarding the viewer's credentials) so the first
- * paint already carries every event row in ascending order. Auth failures
- * send the viewer back to sign-in; any other fetch failure degrades to an
- * empty log. The log is append-only: no edit or delete controls render.
+ * SSR-first audit read through the list-audit action itself (the same query
+ * the HTTP surface serves): loaders in this framework build never see
+ * request cookies, so a same-origin HTTP self-fetch always 401'd in
+ * production and bounced signed-in viewers to the placeholder. Auth stays
+ * enforced upstream — the framework workspace guard redirects signed-out
+ * document loads to sign-in before this loader runs. Any other failure
+ * degrades to an empty log. The log is append-only: no edit or delete
+ * controls render.
  */
-export async function loader({ request }: LoaderFunctionArgs): Promise<AuditLoaderData> {
-  const empty: AuditLoaderData = { events: [] };
+export async function loader(): Promise<AuditLoaderData> {
   try {
-    const url = new URL("/_agent-native/actions/list-audit", request.url);
-    const headers: Record<string, string> = {};
-    const cookie = request.headers.get("cookie");
-    if (cookie) {
-      headers.cookie = cookie;
-    }
-    const authorization = request.headers.get("authorization");
-    if (authorization) {
-      headers.authorization = authorization;
-    }
-    const response = await fetch(url, {
-      headers,
-      signal: AbortSignal.timeout(3000),
-    });
-    if (response.status === 401) {
-      throw redirect("/");
-    }
-    if (!response.ok) {
-      return empty;
-    }
-    const data: unknown = await response.json();
-    const rows = Array.isArray(data) ? data : [];
+    const rows = await listAudit.run({ limit: 100 });
     const events = rows.filter(isAuditRow).map((row) => ({
       ...row,
       createdAt: toIsoStamp(row.createdAt),
     }));
     return { events };
-  } catch (error) {
-    if (error instanceof Response) {
-      throw error;
-    }
-    return empty;
+  } catch {
+    return { events: [] };
   }
 }
 
